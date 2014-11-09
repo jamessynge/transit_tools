@@ -1,10 +1,9 @@
 transit_tools
 =============
 Tools for processing transit agency data.
-
-Original author: James Synge, Lexington, MA
-On the web here: http://enigma2eureka.blogspot.com/
-G+: https://plus.google.com/+JamesSynge
+* Original author: James Synge, Lexington, MA
+* On the web here: http://enigma2eureka.blogspot.com/
+* G+: https://plus.google.com/+JamesSynge
 
 Initially this contains the following:
 
