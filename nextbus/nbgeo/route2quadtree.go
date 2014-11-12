@@ -1,9 +1,9 @@
 package nbgeo
 
 import (
-	"geom"
+	"github.com/jamessynge/transit_tools/geom"
 	"log"
-	"nextbus"
+	"github.com/jamessynge/transit_tools/nextbus"
 )
 
 type RouteToQuadTreeMap struct {

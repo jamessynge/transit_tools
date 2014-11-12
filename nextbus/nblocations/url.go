@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"nextbus"
+	"github.com/jamessynge/transit_tools/nextbus"
 	"time"
-	"util"
+	"github.com/jamessynge/transit_tools/util"
 )
 
 const (

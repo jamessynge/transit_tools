@@ -1,10 +1,10 @@
 package busgeom
 
 import (
-	"geom"
+	"github.com/jamessynge/transit_tools/geom"
 	"log"
 	"math"
-	"stats"
+	"github.com/jamessynge/transit_tools/stats"
 )
 
 // Represents a segment of a path, from Pt1 to Pt2 (i.e. direction matters).

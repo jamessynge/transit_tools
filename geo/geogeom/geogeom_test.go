@@ -1,12 +1,12 @@
 package geogeom
 
 import (
-	"compare"
-	"geo"
+	"github.com/jamessynge/transit_tools/compare"
+	"github.com/jamessynge/transit_tools/geo"
 	"math"
 	"testing"
 
-	//	"geom"
+	//	"github.com/jamessynge/transit_tools/geom"
 )
 
 const (

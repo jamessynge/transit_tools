@@ -3,12 +3,12 @@ package nextbus
 import (
 	"encoding/xml"
 	"fmt"
-	"geo"
+	"github.com/jamessynge/transit_tools/geo"
 	"io/ioutil"
 	"log"
 	"path/filepath"
 	"strings"
-	"util"
+	"github.com/jamessynge/transit_tools/util"
 )
 
 type Route struct {

@@ -2,10 +2,10 @@ package nbgeo
 
 import (
 	//	"fmt"
-	"geo"
-	"geom"
+	"github.com/jamessynge/transit_tools/geo"
+	"github.com/jamessynge/transit_tools/geom"
 	"log"
-	"nextbus"
+	"github.com/jamessynge/transit_tools/nextbus"
 )
 
 func LLToPoint(latlon *geo.Location) geom.Point {

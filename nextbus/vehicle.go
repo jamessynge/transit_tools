@@ -2,11 +2,11 @@ package nextbus
 
 import (
 	"fmt"
-	"geo"
+	"github.com/jamessynge/transit_tools/geo"
 	"sort"
 	"strconv"
 	"time"
-	"util"
+	"github.com/jamessynge/transit_tools/util"
 )
 
 type VehicleLocation struct {

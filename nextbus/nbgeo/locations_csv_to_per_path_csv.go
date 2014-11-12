@@ -1,9 +1,9 @@
 package nbgeo
 
 import (
-	"nextbus"
+	"github.com/jamessynge/transit_tools/nextbus"
 	//"encoding/csv"
-	//	"geom"
+	//	"github.com/jamessynge/transit_tools/geom"
 	//"io"
 	"fmt"
 	"log"
@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
-	"util"
+	"github.com/jamessynge/transit_tools/util"
 )
 
 // Support for sending records to an appropriate output file, each with

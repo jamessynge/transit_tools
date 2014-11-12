@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"util"
+	"github.com/jamessynge/transit_tools/util"
 )
 
 func Data1DWeightedMedian(source Data1DSource) (value float64, index int) {

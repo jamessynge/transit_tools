@@ -2,8 +2,8 @@ package geogeom
 
 import (
 	"fmt"
-	"geo"
-	"geom"
+	"github.com/jamessynge/transit_tools/geo"
+	"github.com/jamessynge/transit_tools/geom"
 	"math"
 )
 

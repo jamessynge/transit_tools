@@ -2,7 +2,7 @@ package fit
 
 import (
 	"fmt"
-	"stats"
+	"github.com/jamessynge/transit_tools/stats"
 )
 
 func FitLineToPoints(data stats.Data2DSource) (m, b float64, yIsDominant bool, err error) {

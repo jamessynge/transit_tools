@@ -1,13 +1,13 @@
 package fit
 
 import (
-	"compare"
+	"github.com/jamessynge/transit_tools/compare"
 	_ "fmt"
-	"geom"
+	"github.com/jamessynge/transit_tools/geom"
 	"math"
 	"math/rand"
 	_ "sort"
-	"stats"
+	"github.com/jamessynge/transit_tools/stats"
 	"testing"
 )
 

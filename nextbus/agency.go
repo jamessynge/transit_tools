@@ -2,7 +2,7 @@ package nextbus
 
 import (
 	"fmt"
-	"geo"
+	"github.com/jamessynge/transit_tools/geo"
 	"hash"
 	"hash/fnv"
 	"log"

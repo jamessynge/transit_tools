@@ -4,10 +4,10 @@
 package busgeom
 
 import (
-	"geom"
+	"github.com/jamessynge/transit_tools/geom"
 	"log"
 	"math"
-	"stats"
+	"github.com/jamessynge/transit_tools/stats"
 )
 
 const (

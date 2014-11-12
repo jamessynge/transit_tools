@@ -1,7 +1,7 @@
 package nextbus
 
 import (
-	"geo"
+	"github.com/jamessynge/transit_tools/geo"
 )
 
 type Location struct {

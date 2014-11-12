@@ -3,7 +3,7 @@ package nextbus
 import (
 	"encoding/xml"
 	"fmt"
-	"geo"
+	"github.com/jamessynge/transit_tools/geo"
 	"github.com/golang/glog"
 	//	"log"
 )

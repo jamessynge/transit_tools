@@ -1,7 +1,7 @@
 package busgeom
 
 import (
-	"geom"
+	"github.com/jamessynge/transit_tools/geom"
 )
 
 // Data about relationship between a segment and a report.

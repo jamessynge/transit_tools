@@ -1,8 +1,8 @@
 package nextbus
 
 import (
-	"compare"
-	"geo"
+	"github.com/jamessynge/transit_tools/compare"
+	"github.com/jamessynge/transit_tools/geo"
 	"testing"
 	"time"
 )

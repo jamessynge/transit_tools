@@ -6,7 +6,7 @@ import (
 "os"
 "path/filepath"
 "time"
-"util"
+"github.com/jamessynge/transit_tools/util"
 )
 
 // DEBUG flags:

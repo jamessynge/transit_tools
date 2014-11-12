@@ -3,9 +3,9 @@ package nblocations
 import (
 	"github.com/golang/glog"
 	"net/http"
-	"nextbus"
+	"github.com/jamessynge/transit_tools/nextbus"
 	"time"
-	"util"
+	"github.com/jamessynge/transit_tools/util"
 )
 
 type VehicleLocationsResponse struct {

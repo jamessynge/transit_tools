@@ -2,9 +2,9 @@ package fit
 
 import (
 	"fmt"
-	"geom"
+	"github.com/jamessynge/transit_tools/geom"
 	"math"
-	"stats"
+	"github.com/jamessynge/transit_tools/stats"
 )
 
 /*

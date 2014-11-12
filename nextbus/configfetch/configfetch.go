@@ -6,10 +6,10 @@ import (
 "github.com/golang/glog"
 "net/http"
 "path/filepath"
-"nextbus"
+"github.com/jamessynge/transit_tools/nextbus"
 "sort"
 "strings"
-"util"
+"github.com/jamessynge/transit_tools/util"
 "time"
 "os"
 )

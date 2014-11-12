@@ -2,7 +2,7 @@ package nextbus
 
 import (
     "testing"
-    "compare"
+    "github.com/jamessynge/transit_tools/compare"
 )
 
 func TestUnmarshalNextbusXml_Empty(t *testing.T) {

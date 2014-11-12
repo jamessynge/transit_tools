@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"util"
+	"github.com/jamessynge/transit_tools/util"
 )
 
 // Archives the XML responses from NextBus as files in a tar.

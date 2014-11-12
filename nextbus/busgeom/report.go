@@ -3,17 +3,17 @@ package busgeom
 import (
 	//	"flag"
 	"log"
-	"nextbus"
+	"github.com/jamessynge/transit_tools/nextbus"
 	//	"path/filepath"
-	"geo/geogeom"
-	"geom"
-	"util"
-	//	"geo"
+	"github.com/jamessynge/transit_tools/geo/geogeom"
+	"github.com/jamessynge/transit_tools/geom"
+	"github.com/jamessynge/transit_tools/util"
+	//	"github.com/jamessynge/transit_tools/geo"
 	"math"
 	//	"fmt"
 	"io"
-	//	"fit"
-	"stats"
+	//	"github.com/jamessynge/transit_tools/fit"
+	"github.com/jamessynge/transit_tools/stats"
 )
 
 var (

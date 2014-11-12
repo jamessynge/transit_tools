@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
-	"geo"
+	"github.com/jamessynge/transit_tools/geo"
 	"io"
 	"log"
 	"os"

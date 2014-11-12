@@ -1,7 +1,7 @@
 package geo
 
 import (
-	"compare"
+	"github.com/jamessynge/transit_tools/compare"
 	"math"
 	"testing"
 )

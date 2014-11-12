@@ -6,11 +6,11 @@ package nblocations
 import (
 	"fmt"
 	"github.com/golang/glog"
-	"nextbus"
+	"github.com/jamessynge/transit_tools/nextbus"
 	"os"
 	"path/filepath"
 	"time"
-	"util"
+	"github.com/jamessynge/transit_tools/util"
 )
 
 type ArchiveSplitPoint interface {

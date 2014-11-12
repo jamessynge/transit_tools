@@ -1,9 +1,9 @@
 package nextbus
 
 import (
-	"compare"
+	"github.com/jamessynge/transit_tools/compare"
 	"fmt"
-	"geo"
+	"github.com/jamessynge/transit_tools/geo"
 	"strings"
 )
 
