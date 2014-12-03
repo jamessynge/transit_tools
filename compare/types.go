@@ -42,3 +42,5 @@ type Difference struct {
 	TypeDiff bool // Are the types different
 	Msg      string
 }
+
+type Differences []*Difference

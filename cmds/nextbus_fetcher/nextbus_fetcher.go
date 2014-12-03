@@ -69,14 +69,15 @@ var fetchIntervalFlag = flag.Float64(
 	"fetch_interval", 0,
 	"Seconds between fetches of vehicle locations")
 var extraDurationFlag = flag.Uint(
-	"extra_duration", 120,
+	"extra_duration", 60,
 	"Seconds to subtract from last fetch time, in a probably vain attempt to " +
 	"get more accuracy in the time of last report for a vehicle")
 
 // Rate limit flag defaults set to 100,000 per second, just under 2MB/20s,
 // the limit allowed by NextBus, but expressed such that the max available will
 // be 100,000 so we don't flood NextBus when doing the daily config fetch
-// after a period of just fetching locations, which aren't very big.
+// after a period of just fetching locations, which aren't very big (for the
+// MBTA, under 100KB is normal, and that is at most once every 10s).
 var rateLimitBytesFlag = flag.Uint(
 	"rate_limit_bytes", 100000,
 	"Maximum number of bytes to fetch in --rate_limit_interval")
@@ -207,6 +208,9 @@ func main() {
 	util.InitGOMAXPROCS()
 
 	// How often should we fetch vehicle locations?
+	if 0 < *fetchIntervalFlag && *fetchIntervalFlag < 10 {
+		glog.Fatalf("The specified fetch interval (%f) is too short", *fetchIntervalFlag)
+	}
 	if *fetchIntervalFlag < 10 {
 		const minInterval = 10.0
 		fetchInterval := float64(minInterval)

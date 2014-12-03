@@ -6,9 +6,83 @@ w32tm /stripchart /period:900 /computer:2.pool.ntp.org
 w32tm /stripchart /period:900 /computer:time.nist.gov
 */
 import (
+	"flag"
 	"fmt"
+//	"strings"
 	"time"
 )
+
+type TimeLocation struct {
+	Location *time.Location
+}
+func (p *TimeLocation) At(t time.Time) time.Time {
+	return t.In(p.Location)
+}
+func (p *TimeLocation) Set(s string) error {
+	v, err := time.LoadLocation(s)
+	if err != nil { return err }
+	p.Location = v
+	return nil
+}
+func (p *TimeLocation) String() string {
+	if p.Location == nil { return "<nil-location>" }
+	return p.Location.String()
+}
+func (p *TimeLocation) Get() interface{} {
+	return p.Location
+}
+func NewTimeLocationFlag(name, defaultLocation, usage string) *TimeLocation {
+	return NewTimeLocationFlagSet(flag.CommandLine, name, defaultLocation, usage)
+}
+func NewTimeLocationFlagSet(
+		fs *flag.FlagSet, name, defaultLocation, usage string) *TimeLocation {
+	p := new(TimeLocation)
+	if defaultLocation != "" {
+		val, err := time.LoadLocation(defaultLocation)
+		if err != nil {
+			// Since this method is (typically) called during an init() function,
+			// before main has been called, it may not be OK to call glog yet,
+			// so we'll just panic if the default is bad/unusable (e.g. if the
+			// time.Location database is missing).
+			panic(fmt.Sprintf("Unable to convert %s to a time.Location value!\n%s",
+												defaultLocation, err))
+		}
+		p.Location = val
+	}
+	fs.Var(p, name, usage)
+	return p
+}
+
+type TimeLocationPtr struct {
+	pp **time.Location
+}
+func (p *TimeLocationPtr) Set(s string) error {
+	v, err := time.LoadLocation(s)
+	if err != nil { return err }
+	*(p.pp) = v
+	return nil
+}
+func (p *TimeLocationPtr) String() string {
+	v := *(p.pp)
+	if v == nil {
+		return "<nil>"
+	}
+	return v.String()
+}
+func (p *TimeLocationPtr) Get() interface{} {
+	return *(p.pp)
+}
+func NewTimeLocationVar(ppLocation **time.Location, name, usage string) {
+	NewTimeLocationVarFlagSet(flag.CommandLine, ppLocation, name, usage)
+}
+func NewTimeLocationVarFlagSet(
+		fs *flag.FlagSet, ppLocation **time.Location, name, usage string) {
+	if ppLocation == nil {
+		panic("pointer to *time.Location variable is nil!")
+	}
+	p := &TimeLocationPtr{pp: ppLocation}
+	fs.Var(p, name, usage)
+}
 
 func UnixMillisToTime(timeMs int64) time.Time {
 	return time.Unix(timeMs/1000, (timeMs%1000)*1000000)

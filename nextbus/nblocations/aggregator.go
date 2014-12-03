@@ -1,5 +1,16 @@
 package nblocations
 
+// Oddities seen in the data:
+//
+//  	Apparently when a bus is changing from one route or one direction to
+//		another, multiple reports may be issued with the same exact location
+//    AND time, even though the change is happening well after the location
+//    report was taken.  Sometimes multiple changes in routeTag or dirTag are
+//		seen, including returning to  the original value.
+//
+//    Sometimes an old (previous) location report for a vehicle is returned
+//    with the same old time, after a newer report has been returned.
+
 import (
 	"github.com/golang/glog"
 	"math"

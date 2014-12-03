@@ -24,11 +24,17 @@ func ComputeT(agency string, lastTime time.Time, extraSeconds uint) int64 {
 			// Not doing the fancy overlapping fetches.
 			since := time.Since(lastTime)
 			if since.Minutes() > 5 {
-				// Nextbus says don't request more than 5 minutes back, but you can specify
-				// t=0 and will get back as much as 15 minutes of data.
+				// Nextbus says don't request more than 5 minutes back, but you can
+				// specify t=0 and will get back as much as 15 minutes of data.
 				t = 0
 				v2.Info("since:", since,"   setting t=0")
 			}
+		} else if extraSeconds >= 5 * 60 {
+			// NextBus states that t may be no more than 5 mintes in the past, but
+			// also states that if t=0 they will return the most recent reports from
+			// all buses, up to 15 minutes in the past.
+			t = 0
+			glog.V(3).Info("setting t=0 always")
 		} else {
 			extraDuration := -time.Duration(extraSeconds) * time.Second
 			t2 := lastTime.Add(extraDuration)
@@ -39,7 +45,7 @@ func ComputeT(agency string, lastTime time.Time, extraSeconds uint) int64 {
 				// location reports for vehicles we previously flushed from the
 				// aggregator.
 				t2 = time.Now().Add(time.Duration(-5) * time.Minute)
-				v2.Infof("lastTime-extraSeconds is too old; lastTime adjusted\n  From: %s\n    To: %s", lastTime, t2)
+				glog.Warningf("lastTime-extraSeconds is too old; lastTime adjusted\n  From: %s\n    To: %s", lastTime, t2)
 			} else {
 				v2.Infof("Adjusted lastTime by %s\n  From: %s\n    To: %s", extraDuration, lastTime, t2)
 			}

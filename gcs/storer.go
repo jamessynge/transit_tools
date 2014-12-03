@@ -6,14 +6,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
+	"github.com/golang/glog"
 	"golang.org/x/net/context"
-
 	"github.com/golang/oauth2"
 	"github.com/golang/oauth2/google"
 	"google.golang.org/cloud"
@@ -57,51 +57,37 @@ func CopyLocalFileToBucket(
 		object *storage.Object) (storage.Object, error) {
 	// TODO Open localPath first before creating a remote file.
 
+	f, err := os.Open(localPath)
 
 
+/*
+	// If not provided, create a default Object.
 	if object == nil {
+		//	&storage.Object{ContentType: "text/plain", ACL: []storage.ACLRule{storage.ACLRule{"allUsers", storage.RoleReader}}}, // Shared Publicly
 		object = &storage.Object{}
+		// TODO Use http.DetectContentType to set the ContentType field.
 	}
-	wc := storage.NewWriter(ctx, bucket, remotePath, object
-	&storage.Object{
-	    ContentType: "text/plain",
-	    ACL:         []storage.ACLRule{storage.ACLRule{"allUsers", storage.RoleReader}}, // Shared Publicly
-	})
-if _, err := wc.Write([]byte("hello world")); err != nil {
-    log.Fatal(err)
-}
-if err := wc.Close(); err != nil {
-    log.Fatal(err)
-}
+*/
 
-o, err := wc.Object()
-if err != nil {
-    log.Fatal(err)
+	wc := storage.NewWriter(ctx, bucket, remotePath, object)
+	written, err := io.Copy(wc, rc)
+	err2 := wc.Close()
+	if err2 != nil && err == nil {
+		err = err2
+	}
+	result, err2 := wc.Object()
+	if err2 != nil && err == nil {
+		err = err2
+	}
+	if err != nil {
+		glog.Warningf(`Error while copying local file to bucket.\n
+ Local path: %s
+     Bucket: %s
+Remote path: %s
+	    Error: %s`, localPath, bucket, remotePath, err)
+	}
+	return result, err
 }
-
-
-}
-
-// see the auth example how to initiate a context.
-ctx := cloud.NewContext("project-id", &http.Client{Transport: nil})
-
-wc := storage.NewWriter(ctx, "bucketname", "filename1", &storage.Object{
-    ContentType: "text/plain",
-    ACL:         []storage.ACLRule{storage.ACLRule{"allUsers", storage.RoleReader}}, // Shared Publicly
-})
-if _, err := wc.Write([]byte("hello world")); err != nil {
-    log.Fatal(err)
-}
-if err := wc.Close(); err != nil {
-    log.Fatal(err)
-}
-
-o, err := wc.Object()
-if err != nil {
-    log.Fatal(err)
-}
-log.Println("updated object:", o)
-
 
 // createFile creates a file in Google Cloud Storage.
 func (d *demo) createFile(fileName string) {

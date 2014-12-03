@@ -3,6 +3,7 @@
 package compare
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
 )
@@ -525,13 +526,112 @@ func structComparator(
 	return
 }
 
+func (p *Difference) String() string {
+	if p == nil {
+		return ""
+	}
+	if p.TypeDiff {
+		return fmt.Sprintf(`
+   Field: %v
+     Msg: %s
+Declared: %s
+Expected: %s
+  Actual: %s`,
+  			p.FieldName, p.Msg, p.FieldType, p.Value1, p.Value2)
+	}
+	v1, v2 := p.Value1, p.Value2
+	if v1 == nil && v2 == nil {
+		v1, v2 = p.ReflectValue1, p.ReflectValue2
+	}
+	fn := func(v interface{}) string {
+		if v == nil {
+			return "nil"
+		}
+		if x, ok := v.(fmt.Stringer); ok {
+			return x.String()
+		}
+		return fmt.Sprintf("%v", v)
+	}
+	return fmt.Sprintf(`
+   Field: %v
+     Msg: %s
+    Type: %s
+Expected: %s
+  Actual: %s`,
+			p.FieldName, p.Msg, p.FieldType, fn(v1), fn(v2))
+}
+
+func (d Differences) String() string {
+	if len(d) == 0 {
+		return ""
+	}
+	var b bytes.Buffer
+	for _, diff := range d {
+		s := diff.String()
+		if len(s) > 0 {
+			if b.Len() > 0 {
+				b.WriteString("\n--------------------------------------------\n")
+			}
+			b.WriteString(s)
+		}
+	}
+	return b.String()
+}
+
+/*
+type Difference struct {
+	// The name (or path, such as 'MapField["SomeKey"].AnotherField') of the
+	// field that is different.
+	FieldName string
+
+	// The type of the field; if TypeDiff is true, this is the static type,
+	// and Value1 and Value2 contain the dynamic types that arent' the same.
+	FieldType reflect.Type
+
+	// The two values that are different.  Will not be filled in for values that
+	// are not exported AND are not primitive (i.e. reflect.Indirect() panics,
+	// and we can't work around it).
+	Value1 interface{}
+	Value2 interface{}
+
+	// The reflect.Value wrappers for the two values that are different.
+	ReflectValue1 reflect.Value
+	ReflectValue2 reflect.Value
+
+	TypeDiff bool // Are the types different
+	Msg      string
+}
+
+
+
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 type logNothing int
 
 func (x logNothing) Log(args ...interface{})                 {}
 func (x logNothing) Logf(format string, args ...interface{}) {}
 
 func DeepCompare3(i1, i2 interface{}, config *Config) (
-	eq bool, diffs []*Difference) {
+	eq bool, diffs Differences) {
 	state := &compareState{
 		eq:      true,
 		diffs:   make([]*Difference, 0),
@@ -553,7 +653,7 @@ func DeepCompare3(i1, i2 interface{}, config *Config) (
 				p, type1, type2)
 			panic(p)
 		}
-		diffs = state.diffs
+		diffs = Differences(state.diffs)
 		eq = state.eq && len(diffs) == 0
 		state.logger.Logf("DeepCompare eq=%v\ntype1: %v\ntype2: %v\n\n\n",
 			eq, type1, type2)
@@ -577,6 +677,6 @@ func DeepCompare3(i1, i2 interface{}, config *Config) (
 	return
 }
 
-func DeepCompare(i1, i2 interface{}) (eq bool, diffs []*Difference) {
+func DeepCompare(i1, i2 interface{}) (eq bool, diffs Differences) {
 	return DeepCompare3(i1, i2, nil)
 }
