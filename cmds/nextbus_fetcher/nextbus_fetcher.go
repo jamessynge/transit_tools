@@ -16,7 +16,9 @@
 // one that just fetches locations and writes each response to an xml file;
 // another that produces a tar of the xml files; another that produces the
 // aggregated locations, i.e. csv.gz files).  It means more programs are
-// running, but perhaps is more tolerant of failures.
+// running, but perhaps is more tolerant of failures (e.g. if one dies
+// the others might be able to notice and report the failure, such as no
+// new location files, or staging directory getting "full").
 //
 // TODO Add rate limiting to avoid exceeding provider specified limits
 // across all endpoints (e.g. qps, bps).  For NextBus, the limits are:
@@ -172,6 +174,12 @@ func main() {
 	//	log.SetFlags(log.Lmicroseconds | log.Lshortfile)
 	flag.Parse()
 
+	// Set up channel on which to receive signal notifications (e.g. for
+	// shutting down). We must use a buffered channel or risk missing the
+	// signal if we're not ready to receive when the signal is sent.
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+
 	if len(*storageRootFlag) == 0 {
 		glog.Fatal("Must specify -storage_root directory")
 	}
@@ -277,23 +285,12 @@ func main() {
 	   	http.ListenAndServe(":8080", nil)
 	*/
 
-	// Set up channel on which to receive signal notifications (e.g. for
-	// shutting down). We must use a buffered channel or risk missing the
-	// signal if we're not ready to receive when the signal is sent.
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGHUP, syscall.SIGINT,
-	              syscall.SIGTERM, syscall.SIGQUIT)
-
 	sig := <-signalChan
 	switch sig {
-	case syscall.SIGHUP:
-		glog.Info("syscall.SIGHUP")
 	case syscall.SIGINT:
 		glog.Info("syscall.SIGINT")
 	case syscall.SIGTERM:
 		glog.Info("syscall.SIGTERM")
-	case syscall.SIGQUIT:
-		glog.Info("syscall.SIGQUIT")
 	}
 
 	// Stop the fetchers.
@@ -307,6 +304,8 @@ func main() {
 
 	glog.Flush()
 
+	fmt.Print("Stopping nextbus_fetcher due to signal")
+
 	// Wait for them to finish.
 	for stoppedCh1 != nil || stoppedCh2 != nil {
 		select {
@@ -318,14 +317,10 @@ func main() {
 			stoppedCh2 = nil
 		case sig = <- signalChan:
 			switch sig {
-			case syscall.SIGHUP:
-				glog.Info("syscall.SIGHUP")
 			case syscall.SIGINT:
 				glog.Info("syscall.SIGINT")
 			case syscall.SIGTERM:
 				glog.Info("syscall.SIGTERM")
-			case syscall.SIGQUIT:
-				glog.Info("syscall.SIGQUIT")
 			}
 			os.Exit(1)
 		}
