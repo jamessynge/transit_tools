@@ -35,10 +35,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/golang/glog"
 	"net/http"
-	"github.com/jamessynge/transit_tools/nextbus/configfetch"
-	"github.com/jamessynge/transit_tools/nextbus/nblocations"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -47,6 +44,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/golang/glog"
+
+	"github.com/jamessynge/transit_tools/nextbus/configfetch"
+	"github.com/jamessynge/transit_tools/nextbus/nblocations"
 	"github.com/jamessynge/transit_tools/util"
 )
 
