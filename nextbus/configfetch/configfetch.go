@@ -281,10 +281,13 @@ func PeriodicConfigFetcher(agency, rootDir string, fetcher util.HttpFetcher,
 	}
 	glog.Infoln("Config data fetch hours:", fetchHours)
 
+	// Variables for keeping track of whether we've seen this directory
+	// before or not.
+	configCuller := NewConfigCuller()
+
 	// Channel on which to send in order to indicate that we've stopped;
 	// set once we've been asked to stop.
 	var stoppedPCFCh chan bool
-	lastDir := ""
 
 	fetchOnce := func() {
 		currentDir := filepath.Join(rootDir, time.Now().Format(layout))
@@ -302,32 +305,7 @@ func PeriodicConfigFetcher(agency, rootDir string, fetcher util.HttpFetcher,
 				} else {
 					glog.V(1).Info("Fetched config for '", agency, "'")
 				}
-				// Compare currentDir against last dir, so that we can eliminate
-				// intermediate config directories that are the same as those on
-				// either side of them.
-				// A HACK FOR NOW (i.e. no ability to stop it mid-compare).
-				if lastDir != "" {
-					eq, err := CompareConfigDirs(lastDir, currentDir)
-					if eq && err == nil {
-						// Can get rid of last dir as it is identical for our purposes.
-						glog.Infof("Lasest configuration is the same as the last")
-						glog.Infof("Removing the last config dir: %s", lastDir)
-						err := os.RemoveAll(lastDir)
-						if err != nil {
-							glog.Errorf("Error will removing config dir: %s\nError: %s", lastDir, err)
-						}
-						// TODO If ancestor dir is now empty, delete it too.
-					} else if err != nil {
-						glog.Warningf(`Failed to compare config directories:
- Last: %s
- This: %s
-Error: %s`, lastDir, currentDir, err)
-					} else {
-						// Supposedly a rare occurrence; we'll see.
-						glog.Info("CONFIGURATIONS HAVE CHANGED!!!")
-					}
-				}
-				lastDir = currentDir
+				configCuller.AddDir(currentDir)
 				return
 			case stoppedPCFCh = <- stopPCFCh:
 				glog.Info("Stopping in-progress fetch of config for '", agency, "'")
@@ -384,19 +362,20 @@ Error: %s`, lastDir, currentDir, err)
 	// Do an immediate fetch upon startup.
 	day := time.Now()
 	fetchOnce()
-	if stoppedPCFCh != nil {
-		stoppedPCFCh <- true
-		return
-	}
 
 	// Fetch every day at the designated times.
-	for {
-		fetchTimes := fetchTimesOfDay(day)
-		fetchToday(fetchTimes)
-		if stoppedPCFCh != nil {
-			stoppedPCFCh <- true
-			return
+	if stoppedPCFCh == nil {
+		for {
+			fetchTimes := fetchTimesOfDay(day)
+			fetchToday(fetchTimes)
+			if stoppedPCFCh != nil {
+				break
+			}
+			day = util.MidnightOfNextDay(fetchTimes[len(fetchTimes) - 1])
 		}
-		day = util.MidnightOfNextDay(fetchTimes[len(fetchTimes) - 1])
 	}
+
+	// Stop culling, then send message (true) indicating that we've stopped.
+	configCuller.Stop()
+	stoppedPCFCh <- true
 }

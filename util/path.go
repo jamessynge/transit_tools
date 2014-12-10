@@ -2,9 +2,11 @@ package util
 
 import (
 	"fmt"
-	"github.com/golang/glog"
+	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/golang/glog"
 )
 
 func ChooseUniqueName(dir, base, ext string) (string, error) {
@@ -81,4 +83,32 @@ func IsNewer(path_a, path_b string) bool {
 		return true
 	}
 	return false
+}
+
+func IsEmptyDirectoryOrError(s string) (bool, error) {
+//	fi, err := os.Stat(s)
+//	if err != nil {
+//		return false, err
+//	}
+//	if !fi.IsDir() {
+//		return false, nil
+//	}
+	f, err := os.Open(s)
+	if err != nil {
+	  return false, err
+	}
+	defer f.Close()
+	names, err := f.Readdirnames(10)
+	if err == io.EOF && len(names) == 0 {
+		return true, nil
+	}
+	return false, err
+}
+
+func IsEmptyDirectory(s string, defaultIfUnsure bool) bool {
+	result, err := IsEmptyDirectoryOrError(s)
+	if err != nil {
+		return defaultIfUnsure
+	}
+	return result
 }

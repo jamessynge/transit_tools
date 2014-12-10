@@ -2,10 +2,12 @@ package configfetch
 
 import (
 "bytes"
+"errors"
 "io/ioutil"
 "path/filepath"
 "strings"
 "os"
+"sync/atomic"
 
 "github.com/golang/glog"
 
@@ -14,10 +16,16 @@ import (
 "github.com/jamessynge/transit_tools/util"
 )
 
-func getDirDescendants(dir string) ([]string, error) {
+var compareStoppedErr error = errors.New("Config comparison stopped")
+var CompareStoppedErr error = compareStoppedErr
+
+func getDirDescendants(dir string, doStop *int32) ([]string, error) {
 	errs := util.NewErrors()
   descendants := []string{}
 	walkFn := func(path string, info os.FileInfo, err error) error {
+		if atomic.LoadInt32(doStop) != 0 {
+			return compareStoppedErr
+		}
 		if err == nil {
 			rel, err := filepath.Rel(dir, path)
 			if err == nil {
@@ -119,13 +127,13 @@ func compareTwoConfigFiles(dir1, dir2, rel string) (eq bool, err error) {
 		return true, nil
 	}
 	if !strings.HasSuffix(rel, ".xml") {
-		glog.V(1).Infoln("Non-xml files are different", rel)
+		glog.Infoln("Non-xml files are different", rel)
 		return false, nil
 	}
 	bytes1 = removeXmlComments(bytes1)
 	bytes2 = removeXmlComments(bytes2)
 	if bytes.Equal(bytes1, bytes2) {
-		glog.V(1).Infoln("Cleaned bytes are the same for", rel)
+		glog.V(2).Infoln("Cleaned bytes are the same for", rel)
 		return true, nil
 	}
 	body1, err := nextbus.UnmarshalNextbusXml(bytes1)
@@ -143,7 +151,7 @@ func compareTwoConfigFiles(dir1, dir2, rel string) (eq bool, err error) {
 		glog.Infof("Files are different:\nFile 1: %s\nFile 2: %s\nDiffs:\n%s",
 							 fp1, fp2, diffs)
 	} else {
-		glog.V(1).Infoln("Nextbus xml matches for", rel)
+		glog.V(2).Infoln("Nextbus xml matches for", rel)
 	}
 	return eq, nil
 }
@@ -152,22 +160,25 @@ func compareTwoConfigFiles(dir1, dir2, rel string) (eq bool, err error) {
 // all the same, false if they aren't, including if there are different
 // numbers of files. Any error is deemed to indicate a difference, so we
 // only delete config dirs when there is no difference.
-func CompareConfigDirs(dir1, dir2 string) (eq bool, err error) {
-	entries1, err := getDirDescendants(dir1)
+func StoppableConfigDirsComparison(dir1, dir2 string, doStop *int32) (eq bool, err error) {
+	entries1, err := getDirDescendants(dir1, doStop)
 	if err != nil {
 		return false, err
 	}
-	glog.Infoln("Found", len(entries1), "entries in", dir1)
-	entries2, err := getDirDescendants(dir2)
+	glog.V(1).Infoln("Found", len(entries1), "entries in", dir1)
+	entries2, err := getDirDescendants(dir2, doStop)
 	if err != nil {
 		return false, err
 	}
-	glog.Infoln("Found", len(entries2), "entries in", dir2)
+	glog.V(1).Infoln("Found", len(entries2), "entries in", dir2)
 	if len(entries1) != len(entries2) {
 		// Clearly different somewhere.
 		return false, nil
 	}
 	for ndx, _ := range entries1 {
+		if atomic.LoadInt32(doStop) != 0 {
+			return false, compareStoppedErr
+		}
 		entry1, entry2 := entries1[ndx], entries2[ndx]
 		if entry1 < entry2 {
 			// There is an extra entry in entries1.
@@ -178,9 +189,21 @@ func CompareConfigDirs(dir1, dir2 string) (eq bool, err error) {
 			return false, nil
 		}
 		// Are the files the same?
+		// I'm assuming that the files are small enough that I don't need to
+		// push doStop all the way into compareTwoConfigFiles().
 		if eq, err := compareTwoConfigFiles(dir1, dir2, entry1); !eq || err != nil {
 			return false, err
 		}
 	}
 	return true, nil
+}
+
+// Relatively trivial comparison, just returns true if the xml documents are
+// all the same, false if they aren't, including if there are different
+// numbers of files. Any error is deemed to indicate a difference, so we
+// only delete config dirs when there is no difference.
+func CompareConfigDirs(dir1, dir2 string) (eq bool, err error) {
+	doStop := new(int32)
+	*doStop = 0
+	return StoppableConfigDirsComparison(dir1, dir2, doStop)
 }

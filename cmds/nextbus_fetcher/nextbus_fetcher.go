@@ -306,7 +306,7 @@ func main() {
 
 	glog.Flush()
 
-	fmt.Print("Stopping nextbus_fetcher due to signal")
+	fmt.Println("\nStopping nextbus_fetcher due to signal\n")
 
 	// Wait for them to finish.
 	for stoppedCh1 != nil || stoppedCh2 != nil {
