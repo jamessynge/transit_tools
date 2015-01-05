@@ -3,7 +3,6 @@ package geom
 import (
 	"fmt"
 )
-	
 
 type Rect struct {
 	MinX, MaxX, MinY, MaxY float64
@@ -126,6 +125,3 @@ func (r Rect) OutCode(p Point) (outCode int) {
 func (r Rect) String() string {
 	return fmt.Sprintf("{X=(%v to %v), Y=(%v to %v)}", r.MinX, r.MaxX, r.MinY, r.MaxY)
 }
-
-
-

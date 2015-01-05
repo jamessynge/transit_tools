@@ -93,8 +93,12 @@ func BresenhamLine(img Image, x0, y0, x1, y1 int, c color.Color) {
 }
 
 func DrawRectangle(img Image, x0, y0, x1, y1 int, c color.Color) {
-	if x0 > x1 { x0, x1 = x1, x0 }
-	if y0 > y1 { y0, y1 = y1, y0 }
+	if x0 > x1 {
+		x0, x1 = x1, x0
+	}
+	if y0 > y1 {
+		y0, y1 = y1, y0
+	}
 	for x := x0; x <= x1; x++ {
 		img.Set(x, y0, c)
 		img.Set(x, y1, c)
@@ -109,8 +113,8 @@ func DrawRectangle(img Image, x0, y0, x1, y1 int, c color.Color) {
 // Coordinates are meters.
 type MetricPathImage struct {
 	dataBounds geom.Rect
-	hist2d *geom.Hist2D
-	img Image
+	hist2d     *geom.Hist2D
+	img        Image
 }
 
 func NewMetricPathImage(dataBounds geom.Rect, scale float64) *MetricPathImage {
@@ -127,11 +131,11 @@ func NewMetricPathImage(dataBounds geom.Rect, scale float64) *MetricPathImage {
 	}
 	log.Printf("Histogram data dim to bucket scale: %v", scale)
 	hist2d := geom.NewHist2D(
-		dataBounds, int(dataBounds.Width()*scale + 0.5), int(dataBounds.Height()*scale + 0.5))
+		dataBounds, int(dataBounds.Width()*scale+0.5), int(dataBounds.Height()*scale+0.5))
 	log.Printf("Buckets: %d x %d", hist2d.BucketWidth, hist2d.BucketHeight)
 	return &MetricPathImage{
 		dataBounds: dataBounds,
-		hist2d: hist2d,
+		hist2d:     hist2d,
 	}
 }
 
@@ -203,7 +207,7 @@ func (p *MetricPathImage) HistToImage() {
 }
 
 func createHistImage(
-		bounds geom.Rect, scale float64, reports []*busgeom.Report) *MetricPathImage {
+	bounds geom.Rect, scale float64, reports []*busgeom.Report) *MetricPathImage {
 	mpi := NewMetricPathImage(bounds, scale)
 	mpi.IncrementPoints(reports)
 	mpi.HistToImage()
@@ -211,14 +215,13 @@ func createHistImage(
 }
 
 func initReportsAndPathImage(
-	reports []*busgeom.Report, pathPoints []geom.Point, pathMargin float64) (
-	*MetricPathImage) {
+	reports []*busgeom.Report, pathPoints []geom.Point, pathMargin float64) *MetricPathImage {
 
 	rb := busgeom.ReportsBounds(reports)
 	log.Printf("Reports bounds: %s", rb)
 
 	// Make sure all the reports are inside the image.
-	rb = rb.AddBorder(1, 1)  // Meters
+	rb = rb.AddBorder(1, 1) // Meters
 
 	pb := geom.PointsBounds(pathPoints)
 	log.Printf("Path bounds: %s", pb)

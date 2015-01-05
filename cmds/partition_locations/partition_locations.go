@@ -1,7 +1,7 @@
 // Partition vehicle reports by location (area). The partitions
 // can either be determined from the data, or supplied as input
 // (e.g. from a previous partitioning).
-package main 
+package main
 
 import (
 	"flag"
@@ -27,16 +27,16 @@ var (
 
 	locationsGlobFlag = flag.String(
 		"location-roots", "",
-		"Comma-separated list of paths (globs) to search for locations files " +
-		"(e.g. .csv.gz files).")
+		"Comma-separated list of paths (globs) to search for locations files "+
+			"(e.g. .csv.gz files).")
 	outputDirFlag = flag.String(
 		"output", "",
 		"Directory into which to write the geo-partitioned locations.")
 
 	noPartitionFlag = flag.Bool(
 		"no-partition", false,
-		"Create index (if it doesn't exist), read the index, but don't partition " +
-		"bulk data.")
+		"Create index (if it doesn't exist), read the index, but don't partition "+
+			"bulk data.")
 
 	minLocationsFlag = flag.Int(
 		"min-locations", 1000000,
@@ -44,10 +44,10 @@ var (
 
 	partitionLevelsFlag = flag.Uint(
 		"partition-levels", 6,
-		"Number of levels of partitioning (alternating between east-west and " +
-		"north-south partitioning); multiple of two recommended; first two " +
-		"levels are special, always having two leaf partitions and a central " +
-		"partition that contains essentially all of the data")
+		"Number of levels of partitioning (alternating between east-west and "+
+			"north-south partitioning); multiple of two recommended; first two "+
+			"levels are special, always having two leaf partitions and a central "+
+			"partition that contains essentially all of the data")
 	cutsPerLevelFlag = flag.Uint(
 		"cuts-per-level", 2,
 		"At each level, how many cuts should be made; at least 1.")
@@ -108,10 +108,10 @@ func SortFiles(filePaths []string, reverse bool) {
 		m := re.FindStringSubmatch(filepath.Base(filePath))
 		var t time.Time
 		if len(m) >= 4 {
-			t, _ = time.Parse("20060102", m[1] + m[2] + m[3])
+			t, _ = time.Parse("20060102", m[1]+m[2]+m[3])
 		} else {
 			if stat, err := os.Stat(filePath); err == nil {
-				t = stat.ModTime()  // Is there a way to get ctime?
+				t = stat.ModTime() // Is there a way to get ctime?
 			} else {
 				glog.Warningf("Unable to determine time for: %s\nError: %s", filePath, err)
 			}
@@ -139,12 +139,12 @@ func SortFiles(filePaths []string, reverse bool) {
 }
 
 func LoadSomeLocations(
-		sortedFilePaths []string, atLeast int) (locations []geo.Location) {
+	sortedFilePaths []string, atLeast int) (locations []geo.Location) {
 	for _, f := range sortedFilePaths {
 		rals, err := nblocations.LoadRecordsAndLocation(f)
 		if err != nil {
 			glog.Warningf("Error reading records after %d from %s\nError: %s",
-										len(rals), f, err)
+				len(rals), f, err)
 		}
 		if len(rals) > 0 {
 			l := make([]geo.Location, 0, len(rals))
@@ -171,12 +171,12 @@ func CreateAgencyPartitioner(filePaths []string) *nblocations.AgencyPartitioner 
 	locations := LoadSomeLocations(filePaths, *minLocationsFlag)
 
 	return nblocations.CreateAgencyPartitioner(
-			*agencyFlag, locations, *partitionLevelsFlag, *cutsPerLevelFlag)
+		*agencyFlag, locations, *partitionLevelsFlag, *cutsPerLevelFlag)
 }
 
 func ReadOrCreatePartitioner() *nblocations.AgencyPartitioner {
 	// To ensure we always operate the same way, we create and save the
-	// partitions index, then read it back from the file. 
+	// partitions index, then read it back from the file.
 	if !util.IsFile(nblocations.GetPartitionsIndexPath(*outputDirFlag)) {
 		filePaths := FindAllFiles(*locationsGlobFlag)
 		a := CreateAgencyPartitioner(filePaths)
@@ -189,12 +189,12 @@ func ReadOrCreatePartitioner() *nblocations.AgencyPartitioner {
 
 type CRC struct {
 	filePath string
-	crc *util.CsvReaderCloser
+	crc      *util.CsvReaderCloser
 }
 
 func OpenCsvFilesSendToCh(
-		filePaths []string, ch chan<- CRC,
-		wg *sync.WaitGroup) {
+	filePaths []string, ch chan<- CRC,
+	wg *sync.WaitGroup) {
 	for _, filePath := range filePaths {
 		crc, err := util.OpenReadCsvFile(filePath)
 		if err != nil {
@@ -208,11 +208,13 @@ func OpenCsvFilesSendToCh(
 }
 
 func ReadCRCs(partitioner nblocations.Partitioner,
-							ch <-chan CRC, wg *sync.WaitGroup) {
+	ch <-chan CRC, wg *sync.WaitGroup) {
 	totalRecords := 0
 	for {
 		crc, ok := <-ch
-		if !ok { break }
+		if !ok {
+			break
+		}
 		glog.Infof("Reading from %s", crc.filePath)
 		records := 0
 		for {
@@ -252,7 +254,7 @@ func ReadCRCs(partitioner nblocations.Partitioner,
 func main() {
 	flag.Parse()
 	checkFlags()
-	defer glog.Flush()	// Flush the files when shutting down
+	defer glog.Flush() // Flush the files when shutting down
 	util.InitGOMAXPROCS()
 	partitioner := ReadOrCreatePartitioner()
 	if *noPartitionFlag {
@@ -264,8 +266,8 @@ func main() {
 	filePaths := FindAllFiles(*locationsGlobFlag)
 	SortFiles(filePaths, false)
 
-	ch := make(chan CRC)  // Unbuffered, so we'll only open one file ahead of
-												// the 
+	ch := make(chan CRC) // Unbuffered, so we'll only open one file ahead of
+	// the
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -280,7 +282,6 @@ func main() {
 
 	partitioner.Close()
 	glog.Info("Closed partition files")
-	
-	
-//	nblocations.FindCsvLocationsFiles
+
+	//	nblocations.FindCsvLocationsFiles
 }

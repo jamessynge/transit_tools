@@ -97,7 +97,7 @@ var (
 )
 
 func CSVFieldsIntoVehicleLocation(
-			fields []string, loc *VehicleLocation) error {
+	fields []string, loc *VehicleLocation) error {
 	if len(fields) != 8 {
 		return fmt.Errorf("Expected 8 fields, not %d", len(fields))
 	}

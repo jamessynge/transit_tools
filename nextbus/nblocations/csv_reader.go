@@ -3,7 +3,7 @@ package nblocations
 // Find and read a nnn.csv.gz files, producing []string slices.
 
 import (
-"io"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +12,6 @@ import (
 
 	"github.com/jamessynge/transit_tools/nextbus"
 	"github.com/jamessynge/transit_tools/util"
-
 )
 
 func shouldSkipDir(root string) bool {
@@ -23,7 +22,7 @@ func shouldSkipDir(root string) bool {
 type ReceivePathFn func(path string) (keepGoing bool)
 
 func FindCsvLocationsFilesUnderRoot(
-		root string, fn ReceivePathFn) (stop bool) {
+	root string, fn ReceivePathFn) (stop bool) {
 	walkFn := func(fp string, info os.FileInfo, err error) error {
 		if stop {
 			return io.EOF
@@ -46,8 +45,8 @@ func FindCsvLocationsFilesUnderRoot(
 		return nil
 	}
 	glog.Infoln("Searching under root", root)
-  filepath.Walk(root, walkFn)
-  return
+	filepath.Walk(root, walkFn)
+	return
 }
 
 func FindCsvLocationsFiles(rootGlobs string, fn ReceivePathFn) {
@@ -69,7 +68,7 @@ func CreateRecordAndLocation(record []string) (*RecordAndLocation, error) {
 }
 
 func LoadRecordsAndLocation(filePath string) (
-		s []*RecordAndLocation, err error) {
+	s []*RecordAndLocation, err error) {
 	fn := func(
 		source string, record []string, recordNum int, err error) error {
 		if err != nil {

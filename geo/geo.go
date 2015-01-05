@@ -22,6 +22,7 @@ type Location struct {
 	Lat Latitude
 	Lon Longitude
 }
+
 func (u Location) String() string {
 	return fmt.Sprintf("(%f, %f)", u.Lat, u.Lon)
 }
@@ -232,8 +233,8 @@ func FromDistanceAndHeading(
 }
 
 func MeasureCentralAxes(
-		loLon, hiLon Longitude, loLat, hiLat Latitude) (
-		snDistance, weDistance float64) {
+	loLon, hiLon Longitude, loLat, hiLat Latitude) (
+	snDistance, weDistance float64) {
 	var south, north, west, east Location
 	south.Lat = loLat
 	north.Lat = hiLat
@@ -245,17 +246,17 @@ func MeasureCentralAxes(
 	west.Lat = (loLat + hiLat) / 2
 	east.Lat = west.Lat
 
-//	glog.Infof("south: %s", south)
-//	glog.Infof("north: %s", north)
-//	glog.Infof("west: %s", west)
-//	glog.Infof("east: %s", east)
+	//	glog.Infof("south: %s", south)
+	//	glog.Infof("north: %s", north)
+	//	glog.Infof("west: %s", west)
+	//	glog.Infof("east: %s", east)
 
 	// Measure the distance.
 	snDistance, _ = ToDistanceAndHeading(south, north)
 	weDistance, _ = ToDistanceAndHeading(west, east)
 
-//	glog.Infof("snDistance: %v", snDistance)
-//	glog.Infof("weDistance: %v", weDistance)
+	//	glog.Infof("snDistance: %v", snDistance)
+	//	glog.Infof("weDistance: %v", weDistance)
 
 	return
 }

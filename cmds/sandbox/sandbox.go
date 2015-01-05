@@ -1,10 +1,10 @@
-package main 
+package main
 
 import (
-"fmt"
-"math"
-"time"
-"bytes"
+	"bytes"
+	"fmt"
+	"math"
+	"time"
 )
 
 func Test_mod() {
@@ -31,7 +31,7 @@ func TestQuotedPrinting() {
 	fmt.Println()
 
 	var b []byte = []byte(s)
-	
+
 	fmt.Printf(" v of b = %v\n", b)
 	fmt.Printf("#v of b = %#v\n", b)
 	fmt.Printf(" q of b = %q\n", b)
@@ -48,14 +48,14 @@ func TestQuotedPrinting() {
 }
 
 const (
-comment_start = "<!--"
-comment_end = "-->"
-pi_start = "<?"
-pi_end = "?>"
+	comment_start = "<!--"
+	comment_end   = "-->"
+	pi_start      = "<?"
+	pi_end        = "?>"
 )
 
 func FindRootXmlElementOffset(body []byte) (
-		whitespaceStart, rootOffset int, err error) {
+	whitespaceStart, rootOffset int, err error) {
 	defer func() {
 		if err != nil {
 			whitespaceStart = -1
@@ -78,9 +78,11 @@ func FindRootXmlElementOffset(body []byte) (
 	}
 
 	lookingAt := func(pat []byte) bool {
-		if offset + len(pat) <= length {
+		if offset+len(pat) <= length {
 			for n := 0; n < len(pat); n++ {
-				if pat[n] != body[n + offset] { return false }
+				if pat[n] != body[n+offset] {
+					return false
+				}
 			}
 			return true
 		}
@@ -108,7 +110,7 @@ func FindRootXmlElementOffset(body []byte) (
 			n := bytes.Index(rest, []byte(pi_end))
 			if n < 0 {
 				err = fmt.Errorf(
-						"Reached end of body before end of processing instruction " +
+					"Reached end of body before end of processing instruction "+
 						"that started at offset %d", offset)
 				return
 			}
@@ -123,7 +125,7 @@ func FindRootXmlElementOffset(body []byte) (
 			n := bytes.Index(rest, []byte(comment_end))
 			if n < 0 {
 				err = fmt.Errorf(
-						"Reached end of body before end of comment that " +
+					"Reached end of body before end of comment that "+
 						"started at offset %d", offset)
 				return
 			}
@@ -136,7 +138,7 @@ func FindRootXmlElementOffset(body []byte) (
 		return
 	}
 	err = fmt.Errorf(
-			"Reached end of body at offset %d before finding root element.", offset)
+		"Reached end of body at offset %d before finding root element.", offset)
 	return
 }
 
@@ -176,8 +178,6 @@ func Test_FindRootXmlElementOffset() {
 
 	Use_FindRootXmlElementOffset(s)
 }
-
-
 
 func main() {
 	Test_FindRootXmlElementOffset()

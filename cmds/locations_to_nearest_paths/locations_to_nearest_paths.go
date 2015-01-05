@@ -1,11 +1,10 @@
 package main
+
 /*
 c:
 cd \Users\james\Documents\EclipseProjects\go\src\github.com\jamessynge\transit_tools
 go run cmds\locations_to_nearest_paths\locations_to_nearest_paths.go --alsologtostderr --locations=X:\mbta\locations\processed\2014\*\*.csv.gz --output=c:\temp\locations-by-path\ --all-paths=c:\temp\locations-by-path\all-paths.xml --overwrite
 */
-
-
 
 import (
 	"flag"
@@ -136,7 +135,9 @@ func main() {
 
 	// FOR NOW, processing one file at a time in order to simplify debugging.
 	for _, filePath := range matchingLocationFilePaths {
-		if filePath == *excludeFlag { continue }
+		if filePath == *excludeFlag {
+			continue
+		}
 		glog.Infof("Reading locations file:  %s", filePath)
 		fileWG.Add(1)
 		numRecords, err := nbgeo.LocationsFileToPerPathFiles(

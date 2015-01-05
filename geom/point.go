@@ -63,20 +63,16 @@ func (p Point) Normalize() Point {
 }
 */
 
-var _typeof_Point = reflect.TypeOf((*Point)(nil)).Elem() 
-
-
-
-
+var _typeof_Point = reflect.TypeOf((*Point)(nil)).Elem()
 
 func VisitPoints(points interface{}, fn func(pt Point)) {
-//Leave out optimization while debugging lower cases.
-//	if s, ok := points.([]Point); ok {
-//		for _, pt := range s {
-//			fn(pt)
-//		}
-//		return
-//	}
+	//Leave out optimization while debugging lower cases.
+	//	if s, ok := points.([]Point); ok {
+	//		for _, pt := range s {
+	//			fn(pt)
+	//		}
+	//		return
+	//	}
 
 	t := reflect.TypeOf(points)
 	if !(t.Kind() == reflect.Array || t.Kind() == reflect.Slice) {
@@ -117,7 +113,9 @@ func VisitPoints(points interface{}, fn func(pt Point)) {
 		// Points is a slice of pointers to objects convertable to Pointer.
 		for n := 0; n < l; n++ {
 			ev := pv.Index(n)
-			if ev.IsNil() { continue }
+			if ev.IsNil() {
+				continue
+			}
 			ev = reflect.Indirect(ev)
 			fn(ev.Interface().(Point))
 		}
@@ -135,7 +133,9 @@ func VisitPoints(points interface{}, fn func(pt Point)) {
 	}
 	for n := 0; n < l; n++ {
 		ev := pv.Index(n)
-		if ev.IsNil() { continue }
+		if ev.IsNil() {
+			continue
+		}
 		ev = reflect.Indirect(ev)
 		fv := ev.FieldByName("Point")
 		fn(fv.Interface().(Point))

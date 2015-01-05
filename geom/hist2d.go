@@ -25,28 +25,27 @@ type IntensityCount struct {
 }
 type IntensityCountSlice []IntensityCount
 
-
 type Hist2D struct {
 	// Data coordinates region (i.e. data outside here is ignored).
-	DataBounds	Rect
+	DataBounds            Rect
 	dataWidth, dataHeight float64
 	// Number of buckets in the histogram x-axis
 	BucketWidth int
 	// Number of buckets in the histogram y-axis
 	BucketHeight int
-	Data       [][]HistCount
-	MaxVal     HistCount
-	NumNonZero HistCount
+	Data         [][]HistCount
+	MaxVal       HistCount
+	NumNonZero   HistCount
 }
 
 func NewHist2D(dataBounds Rect, bucketWidth, bucketHeight int) *Hist2D {
 	p := &Hist2D{
-		DataBounds: dataBounds,
-		dataWidth: dataBounds.Width(),
-		dataHeight: dataBounds.Height(),
-		BucketWidth: bucketWidth,
+		DataBounds:   dataBounds,
+		dataWidth:    dataBounds.Width(),
+		dataHeight:   dataBounds.Height(),
+		BucketWidth:  bucketWidth,
 		BucketHeight: bucketHeight,
-		Data:      make([][]HistCount, bucketHeight),
+		Data:         make([][]HistCount, bucketHeight),
 	}
 	for rowIndex := range p.Data {
 		p.Data[rowIndex] = make([]HistCount, bucketWidth)
@@ -65,6 +64,7 @@ func (p *Hist2D) XToColumn(x float64) (column int) {
 	column = int(frac * float64(p.BucketWidth))
 	return
 }
+
 // Note this swaps horizontal and vertical axes.
 func (p *Hist2D) DataPtToRC(pt Point) (row, column int) {
 	return p.YToRow(pt.Y), p.XToColumn(pt.X)
@@ -113,14 +113,16 @@ func (p *Hist2D) HistCountOccurrences() (countsMap HistCountOccurrences) {
 	}
 	return
 }
+
 // Produce the histogram of intensity values in this Hist2D (i.e. how many
 // times each count occurs).
 func (p *Hist2D) CountOccurrencesAsSlice() IntensityCountSlice {
 	countsMap := p.HistCountOccurrences()
 	return countsMap.ToSlice()
 }
+
 // Returns the 1-d histogram (slice of intensity and occurrences of that
-// intensitie, and ) of 
+// intensitie, and ) of
 func (p *Hist2D) CountsAndCDF() (
 	counts, cdf IntensityCountSlice) {
 	counts = p.CountOccurrencesAsSlice()
@@ -140,6 +142,7 @@ func (p *Hist2D) ToImage(toColor func(v HistCount) color.Color) *image.NRGBA {
 	}
 	return img
 }
+
 // Convert the map of intensity to count into a slice of IntensityCount.
 func (m HistCountOccurrences) ToSlice() IntensityCountSlice {
 	s := make(IntensityCountSlice, len(m))
@@ -158,6 +161,7 @@ func (p IntensityCountSlice) Len() int      { return len(p) }
 func (p IntensityCountSlice) Less(i, j int) bool {
 	return p[i].Intensity < p[j].Intensity
 }
+
 // Produce the cumulative density function of this 1-d histogram (i.e.
 // each entry's count becomes the sum of all counts of entries with an
 // intensity less than or equal to this entry's intensity).
@@ -172,35 +176,31 @@ func (p IntensityCountSlice) ToCDF() (cdf IntensityCountSlice) {
 	return
 }
 
-
-	/*
-		// Find the 1-d histogram bucket that contains intensity (or if not
-		// contained, is next to where it should be).
-		numIntensities := len(hist1d)
-		to1dBucket := func(v geom.HistCount) int {
-			// Since most buckets will have a count of zero unless we're very zoomed in
-			// or out, let's special case that.
-			if v <= hist1d[0].Intensity {
-				return 0
-			}
-			lo, hi := 0, numIntensities - 1
-			for lo <= hi {
-				mid := (lo + hi) / 2
-				i := hist1d[mid].Intensity
-				if i < v {
-					lo = mid + 1
-				} else if i > v {
-					hi = mid - 1
-				} else {
-					return mid
-				}
-			}
-			return lo
+/*
+	// Find the 1-d histogram bucket that contains intensity (or if not
+	// contained, is next to where it should be).
+	numIntensities := len(hist1d)
+	to1dBucket := func(v geom.HistCount) int {
+		// Since most buckets will have a count of zero unless we're very zoomed in
+		// or out, let's special case that.
+		if v <= hist1d[0].Intensity {
+			return 0
 		}
-	*/
-
-
-
+		lo, hi := 0, numIntensities - 1
+		for lo <= hi {
+			mid := (lo + hi) / 2
+			i := hist1d[mid].Intensity
+			if i < v {
+				lo = mid + 1
+			} else if i > v {
+				hi = mid - 1
+			} else {
+				return mid
+			}
+		}
+		return lo
+	}
+*/
 
 func CDFToHEPalette(cdf IntensityCountSlice) (palette color.Palette) {
 	cdf_min := cdf[0].Count

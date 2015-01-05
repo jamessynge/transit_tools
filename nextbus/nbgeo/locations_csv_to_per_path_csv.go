@@ -57,7 +57,7 @@ func recordWriter(ch chan []string, wc *util.CsvWriteCloser,
 		count++
 		if count >= nextAnnounce {
 			glog.Infof("Wrote %d records to %s", count, filePath)
-			if nextAnnounce == 10 * announceStep {
+			if nextAnnounce == 10*announceStep {
 				announceStep = nextAnnounce
 			}
 			nextAnnounce += announceStep

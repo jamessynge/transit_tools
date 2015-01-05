@@ -44,25 +44,25 @@ TODO Add nearest stop tag and title to points, if sufficiently close (sometimes
 */
 
 type DirectionElement struct {
-	Tag      string        `xml:"tag,attr"`
-	Title    string        `xml:"title,attr"`
+	Tag   string `xml:"tag,attr"`
+	Title string `xml:"title,attr"`
 }
 type RouteElement struct {
-	Tag           string              `xml:"tag,attr"`
-	Title         string              `xml:"title,attr"`
-	Directions    []*DirectionElement `xml:"direction"`
+	Tag        string              `xml:"tag,attr"`
+	Title      string              `xml:"title,attr"`
+	Directions []*DirectionElement `xml:"direction"`
 }
 type PointElement struct {
 	Lat float64 `xml:"lat,attr"`
 	Lon float64 `xml:"lon,attr"`
 }
 type PathElement struct {
-	Routes   []*RouteElement   `xml:"route"`
+	Routes []*RouteElement `xml:"route"`
 	Points []*PointElement `xml:"point"`
 }
 type BodyElement struct {
-	Agency  string  `xml:"agency,attr"`
-	Paths   []*PathElement   `xml:"route"`
+	Agency string         `xml:"agency,attr"`
+	Paths  []*PathElement `xml:"route"`
 }
 
 func UnmarshalAllPathsBytes(data []byte) (*BodyElement, error) {
@@ -120,7 +120,6 @@ func CreateAgency(body *BodyElement) (*nextbus.Agency, error) {
 	}
 	return
 }
-
 
 func ReadPaths(r io.Reader) (agency *Agency, err error) {
 

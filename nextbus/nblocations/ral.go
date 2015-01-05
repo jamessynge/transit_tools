@@ -1,7 +1,6 @@
 package nblocations
 
 import (
-
 	"github.com/jamessynge/transit_tools/nextbus"
 	"github.com/jamessynge/transit_tools/util"
 )

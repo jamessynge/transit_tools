@@ -1,6 +1,5 @@
 package nblocations
 
-
 import (
 	"bytes"
 	"encoding/xml"
@@ -19,17 +18,19 @@ import (
 )
 
 var (
-	entriesCount int = 0
-	entriesPrefix = " > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > "
+	entriesCount  int = 0
+	entriesPrefix     = " > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > > "
 )
 
 func enterExitInfof(v glog.Level, level uint, format string, args ...interface{}) func() {
 	entriesCount++
-	if entriesCount < 0 { glog.Fatalf("entriesCount (%d) is < 0!!!", entriesCount) }
-	prefix := entriesPrefix[0:2*entriesCount]
-	glog.V(v).Infof(prefix + format + " Enter", args...)
+	if entriesCount < 0 {
+		glog.Fatalf("entriesCount (%d) is < 0!!!", entriesCount)
+	}
+	prefix := entriesPrefix[0 : 2*entriesCount]
+	glog.V(v).Infof(prefix+format+" Enter", args...)
 	return func() {
-		glog.V(v).Infof(prefix + format + " Exit", args...)
+		glog.V(v).Infof(prefix+format+" Exit", args...)
 		entriesCount--
 	}
 }
@@ -44,7 +45,7 @@ type Partitioner interface {
 }
 type decoderPartitioner interface {
 	Partitioner
-//	decodeRegion(d *Decoder, name string)
+	//	decodeRegion(d *Decoder, name string)
 	// decodeXml consumes the tokens for "this" type of element (must be on
 	// the appropriate StartElement token); when it returns it has advanced
 	// past the corresponding EndElement.
@@ -52,6 +53,7 @@ type decoderPartitioner interface {
 }
 
 type NewDecoderPartitionerFn func() decoderPartitioner
+
 const kAgencyPartitions = "AgencyPartitions"
 const kSouthNorthPartitions = "SouthNorthPartitions"
 const kWestEastPartitions = "WestEastPartitions"
@@ -59,32 +61,39 @@ const kLeafPartition = "LeafPartition"
 
 var (
 	newPartitionerFns = map[string]NewDecoderPartitionerFn{
-//		"AgencyPartitions": func() decoderPartitioner { return new(AgencyPartitioner) },
+		//		"AgencyPartitions": func() decoderPartitioner { return new(AgencyPartitioner) },
 		kSouthNorthPartitions: func() decoderPartitioner { return new(SouthNorthPartitioners) },
-		kWestEastPartitions: func() decoderPartitioner { return new(WestEastPartitioners) },
-		kLeafPartition: func() decoderPartitioner { return new(LeafPartitioner) },
+		kWestEastPartitions:   func() decoderPartitioner { return new(WestEastPartitioners) },
+		kLeafPartition:        func() decoderPartitioner { return new(LeafPartitioner) },
 	}
 )
 
 func decodeSubPartitioner(d *Decoder, level uint) decoderPartitioner {
 	defer enterExitInfof(1, level, "decodeSubPartitioner @ %s", d)()
 
-	if d.err != nil || d.t == nil { return nil }
+	if d.err != nil || d.t == nil {
+		return nil
+	}
 	e, ok := d.t.(xml.StartElement)
-	if !ok || e.Name.Space != "" { return nil }
+	if !ok || e.Name.Space != "" {
+		return nil
+	}
 	fn := newPartitionerFns[e.Name.Local]
 	glog.V(1).Infof("new function for %s is %v", e.Name.Local, fn)
-	if fn == nil { return nil }
+	if fn == nil {
+		return nil
+	}
 	kid := fn()
 	kid.decodeXml(d, level)
 	return kid
 }
 
 type AgencyPartitioner struct {
-	Agency string `xml:",attr"`
+	Agency          string `xml:",attr"`
 	RootPartitioner Partitioner
-	XMLName   xml.Name `xml:"AgencyPartitions"`
+	XMLName         xml.Name `xml:"AgencyPartitions"`
 }
+
 func (p *AgencyPartitioner) OpenForWriting(dir string, delExisting bool) error {
 	return p.RootPartitioner.OpenForWriting(dir, delExisting)
 }
@@ -95,11 +104,11 @@ func (p *AgencyPartitioner) Close() {
 	p.RootPartitioner.Close()
 }
 func (p *AgencyPartitioner) Region() (west, east geo.Longitude,
-																		 south, north geo.Latitude) {
+	south, north geo.Latitude) {
 	return p.RootPartitioner.Region()
 }
 func (p *AgencyPartitioner) FileNamesForRegion(
-		west, east geo.Longitude, south, north geo.Latitude) (names []string) {
+	west, east geo.Longitude, south, north geo.Latitude) (names []string) {
 	return p.RootPartitioner.FileNamesForRegion(west, east, south, north)
 }
 func (p *AgencyPartitioner) decodeXml(d *Decoder, level uint) {
@@ -122,13 +131,14 @@ func (p *AgencyPartitioner) generateJson(prefix string, w io.Writer) {
 }
 
 type RegionBase struct {
-	West geo.Longitude `xml:",attr"`
-	East geo.Longitude `xml:",attr"`
-	South geo.Latitude `xml:",attr"`
-	North geo.Latitude `xml:",attr"`
+	West  geo.Longitude `xml:",attr"`
+	East  geo.Longitude `xml:",attr"`
+	South geo.Latitude  `xml:",attr"`
+	North geo.Latitude  `xml:",attr"`
 }
+
 func (p *RegionBase) Region() (
-		west, east geo.Longitude, south, north geo.Latitude) {
+	west, east geo.Longitude, south, north geo.Latitude) {
 	return p.West, p.East, p.South, p.North
 }
 func (p *RegionBase) decodeRegion(d *Decoder, level uint, name string) {
@@ -156,11 +166,12 @@ func (p *RegionBase) decodeRegion(d *Decoder, level uint, name string) {
 type PartitionsBase struct {
 	RegionBase
 	SubPartitions []Partitioner
-	minCoord float64
-	maxCoord float64
-	cutPoints []float64
-	level uint		// 0-based, <= *partitionsLevelsFlag
+	minCoord      float64
+	maxCoord      float64
+	cutPoints     []float64
+	level         uint // 0-based, <= *partitionsLevelsFlag
 }
+
 func (p *PartitionsBase) OpenForWriting(dir string, delExisting bool) error {
 	errs := util.NewErrors()
 	for _, sp := range p.SubPartitions {
@@ -169,13 +180,13 @@ func (p *PartitionsBase) OpenForWriting(dir string, delExisting bool) error {
 	return errs.ToError()
 }
 func (p *PartitionsBase) partition(
-		coord float64, ral *RecordAndLocation) error {
+	coord float64, ral *RecordAndLocation) error {
 	for n, v := range p.cutPoints {
 		if coord < v {
 			return p.SubPartitions[n].Partition(ral)
 		}
 	}
-	return p.SubPartitions[len(p.SubPartitions) - 1].Partition(ral)
+	return p.SubPartitions[len(p.SubPartitions)-1].Partition(ral)
 }
 func (p *PartitionsBase) Close() {
 	for _, sp := range p.SubPartitions {
@@ -196,11 +207,19 @@ func (p *PartitionsBase) decodeBase(d *Decoder, level uint, name string) {
 	}
 }
 func (p *PartitionsBase) FileNamesForRegion(
-		west, east geo.Longitude, south, north geo.Latitude) (names []string) {
-	if west > p.East { return }
-	if east < p.West { return }
-	if south > p.North { return }
-	if north < p.South { return }
+	west, east geo.Longitude, south, north geo.Latitude) (names []string) {
+	if west > p.East {
+		return
+	}
+	if east < p.West {
+		return
+	}
+	if south > p.North {
+		return
+	}
+	if north < p.South {
+		return
+	}
 	for _, sp := range p.SubPartitions {
 		n2 := sp.FileNamesForRegion(west, east, south, north)
 		if len(n2) > 0 {
@@ -221,7 +240,7 @@ func (p *PartitionsBase) generateJson(prefix string, w io.Writer) {
 	if len(p.SubPartitions) > 0 {
 		fmt.Fprintf(w, "%ssubPartitions: [\n", pre)
 		for _, sp := range p.SubPartitions {
-			sp.generateJson(pre + "\t", w)
+			sp.generateJson(pre+"\t", w)
 			fmt.Fprintln(w, ",")
 		}
 		fmt.Fprintf(w, "%s],\n", pre)
@@ -233,14 +252,15 @@ func (p *PartitionsBase) generateJson(prefix string, w io.Writer) {
 
 type SouthNorthPartitioners struct {
 	PartitionsBase
-	XMLName   xml.Name `xml:"SouthNorthPartitions"`
+	XMLName xml.Name `xml:"SouthNorthPartitions"`
 }
+
 func CreateSouthNorthPartitioners(
-		loLon, hiLon geo.Longitude,
-		loLat, hiLat geo.Latitude,
-		level, levelLimit uint, cutsPerLevel int,
-		sortedLocations []geo.Location,
-		sortedWestToEast bool) decoderPartitioner {
+	loLon, hiLon geo.Longitude,
+	loLat, hiLat geo.Latitude,
+	level, levelLimit uint, cutsPerLevel int,
+	sortedLocations []geo.Location,
+	sortedWestToEast bool) decoderPartitioner {
 	if level >= levelLimit {
 		return CreateLeafPartitioner(loLon, hiLon, loLat, hiLat, level)
 	}
@@ -250,37 +270,37 @@ func CreateSouthNorthPartitioners(
 	if sortedWestToEast {
 		geo.SortSouthToNorth(snLocations)
 	}
-	
+
 	glog.Infof("%s CreateSouthNorthPartitioners(%v, %v, %v, %v, %d, len=%d)",
-			"                      "[:level],
-			loLon, hiLon, loLat, hiLat, level, len(snLocations))
-	if len(snLocations) < int(cutsPerLevel) * 10 {
+		"                      "[:level],
+		loLon, hiLon, loLat, hiLat, level, len(snLocations))
+	if len(snLocations) < int(cutsPerLevel)*10 {
 		glog.Fatalf("Too few locations (%d) in S-N partitions at level %d",
-					len(snLocations), level)
+			len(snLocations), level)
 	}
 	p := &SouthNorthPartitioners{
 		PartitionsBase: PartitionsBase{
 			RegionBase: RegionBase{
-				West: loLon,
-				East: hiLon,
+				West:  loLon,
+				East:  hiLon,
 				South: loLat,
 				North: hiLat,
 			},
 			minCoord: float64(loLat),
 			maxCoord: float64(hiLat),
-			level: level,
+			level:    level,
 		},
 	}
 
 	if level < 2 {
 		// Special handling of the first two levels, where we always do 2 cuts
-		// producing 3 partitions at each level; the outer two partitions at 
+		// producing 3 partitions at each level; the outer two partitions at
 		// these levels will be leaves, yet will basically just contain a few
 		// points that are outliers. The single other non-leaf will cover
 		// essentially all of the transit region.
 		if loLat != -90 || hiLat != 90 {
 			glog.Fatalf("Latitude expected to be full 180, not %v to %v",
-								  loLat, hiLat)
+				loLat, hiLat)
 		}
 
 		southern, northern := getLocationsNearExtrema(snLocations)
@@ -290,7 +310,9 @@ func CreateSouthNorthPartitioners(
 
 		// Remove the locations that are outside that latitude range.
 		for n := range snLocations {
-			if locationsLoLat > snLocations[n].Lat { continue }
+			if locationsLoLat > snLocations[n].Lat {
+				continue
+			}
 			if n > 0 {
 				snLocations = snLocations[n:]
 			}
@@ -298,32 +320,34 @@ func CreateSouthNorthPartitioners(
 		}
 		for n := len(snLocations); true; {
 			n--
-			if locationsHiLat < snLocations[n].Lat { continue }
-			snLocations = snLocations[0:n+1]
+			if locationsHiLat < snLocations[n].Lat {
+				continue
+			}
+			snLocations = snLocations[0 : n+1]
 			break
 		}
 
 		p.SubPartitions = append(p.SubPartitions,
-			CreateLeafPartitioner(loLon, hiLon, loLat, locationsLoLat, level + 1))
+			CreateLeafPartitioner(loLon, hiLon, loLat, locationsLoLat, level+1))
 
 		p.cutPoints = append(p.cutPoints, float64(locationsLoLat))
 
 		if level == 0 {
 			p.SubPartitions = append(p.SubPartitions,
-					CreateWestEastPartitioners(
-						loLon, hiLon, locationsLoLat, locationsHiLat,
-						level + 1, levelLimit, cutsPerLevel, snLocations, false))
+				CreateWestEastPartitioners(
+					loLon, hiLon, locationsLoLat, locationsHiLat,
+					level+1, levelLimit, cutsPerLevel, snLocations, false))
 		} else {
 			p.SubPartitions = append(p.SubPartitions,
-					createPartitioner(
-						loLon, hiLon, locationsLoLat, locationsHiLat,
-						level + 1, levelLimit, cutsPerLevel, snLocations, false))
+				createPartitioner(
+					loLon, hiLon, locationsLoLat, locationsHiLat,
+					level+1, levelLimit, cutsPerLevel, snLocations, false))
 		}
 
 		p.cutPoints = append(p.cutPoints, float64(locationsHiLat))
 
 		p.SubPartitions = append(p.SubPartitions,
-			CreateLeafPartitioner(loLon, hiLon, locationsHiLat, hiLat, level + 1))
+			CreateLeafPartitioner(loLon, hiLon, locationsHiLat, hiLat, level+1))
 		return p
 	}
 
@@ -346,27 +370,27 @@ func CreateSouthNorthPartitioners(
 
 		// Create a sub-partition based on weRecords.
 		sp := createPartitioner(
-				loLon, hiLon, minCoord, maxCoord,
-				level + 1, levelLimit, cutsPerLevel,
-				partitionLocations, false)
+			loLon, hiLon, minCoord, maxCoord,
+			level+1, levelLimit, cutsPerLevel,
+			partitionLocations, false)
 
 		p.cutPoints = append(p.cutPoints, float64(maxCoord))
 		p.SubPartitions = append(p.SubPartitions, sp)
 
-		minCoord = maxCoord	
+		minCoord = maxCoord
 	}
 
 	// Remaining locations are for the final partition.
 	sp := createPartitioner(
-			loLon, hiLon, minCoord, hiLat,
-			level + 1, levelLimit, cutsPerLevel,
-			snLocations, false)
+		loLon, hiLon, minCoord, hiLat,
+		level+1, levelLimit, cutsPerLevel,
+		snLocations, false)
 	p.SubPartitions = append(p.SubPartitions, sp)
 
 	return p
 }
 func (p *SouthNorthPartitioners) Partition(
-		ral *RecordAndLocation) error {
+	ral *RecordAndLocation) error {
 	return p.partition(float64(ral.Lat), ral)
 }
 func (p *SouthNorthPartitioners) decodeXml(d *Decoder, level uint) {
@@ -402,14 +426,15 @@ func (p *SouthNorthPartitioners) decodeXml(d *Decoder, level uint) {
 
 type WestEastPartitioners struct {
 	PartitionsBase
-	XMLName   xml.Name `xml:"WestEastPartitions"`
+	XMLName xml.Name `xml:"WestEastPartitions"`
 }
+
 func CreateWestEastPartitioners(
-		loLon, hiLon geo.Longitude,
-		loLat, hiLat geo.Latitude,
-		level, levelLimit uint, cutsPerLevel int,
-		sortedLocations []geo.Location,
-		sortedWestToEast bool) decoderPartitioner {
+	loLon, hiLon geo.Longitude,
+	loLat, hiLat geo.Latitude,
+	level, levelLimit uint, cutsPerLevel int,
+	sortedLocations []geo.Location,
+	sortedWestToEast bool) decoderPartitioner {
 	if level >= levelLimit {
 		return CreateLeafPartitioner(loLon, hiLon, loLat, hiLat, level)
 	}
@@ -421,35 +446,35 @@ func CreateWestEastPartitioners(
 	}
 
 	glog.Infof("%s CreateWestEastPartitioners(%v, %v, %v, %v, %d, len=%d)",
-			"                      "[:level],
-			loLon, hiLon, loLat, hiLat, level, len(weLocations))
+		"                      "[:level],
+		loLon, hiLon, loLat, hiLat, level, len(weLocations))
 
-	if len(weLocations) < cutsPerLevel * 10 {
+	if len(weLocations) < cutsPerLevel*10 {
 		glog.Fatalf("Too few locations (%d) in W-E partitions at level %d",
-					len(weLocations), level)
+			len(weLocations), level)
 	}
 	p := &WestEastPartitioners{
 		PartitionsBase: PartitionsBase{
 			RegionBase: RegionBase{
-				West: loLon,
-				East: hiLon,
+				West:  loLon,
+				East:  hiLon,
 				South: loLat,
 				North: hiLat,
 			},
-			level: level,
+			level:    level,
 			minCoord: float64(loLon),
 			maxCoord: float64(hiLon),
 		},
 	}
 	if level < 2 {
 		// Special handling of the first two levels, where we always do 2 cuts
-		// producing 3 partitions at each level; the outer two partitions at 
+		// producing 3 partitions at each level; the outer two partitions at
 		// these levels will be leaves, yet will basically just contain a few
 		// points that are outliers. The single other non-leaf will cover
 		// essentially all of the transit region.
 		if loLon != -180 || hiLon != 180 {
 			glog.Fatalf("Longitude expected to be full 360, not %v to %v",
-								  loLon, hiLon)
+				loLon, hiLon)
 		}
 
 		western, eastern := getLocationsNearExtrema(weLocations)
@@ -459,7 +484,9 @@ func CreateWestEastPartitioners(
 
 		// Remove the locations that are outside that longitude range.
 		for n := range weLocations {
-			if locationsLoLon > weLocations[n].Lon { continue }
+			if locationsLoLon > weLocations[n].Lon {
+				continue
+			}
 			if n > 0 {
 				weLocations = weLocations[n:]
 			}
@@ -467,34 +494,36 @@ func CreateWestEastPartitioners(
 		}
 		for n := len(weLocations); true; {
 			n--
-			if locationsHiLon < weLocations[n].Lon { continue }
-			weLocations = weLocations[0:n+1]
+			if locationsHiLon < weLocations[n].Lon {
+				continue
+			}
+			weLocations = weLocations[0 : n+1]
 			break
 		}
 
 		p.SubPartitions = append(p.SubPartitions,
-			CreateLeafPartitioner(loLon, locationsLoLon, loLat, hiLat, level + 1))
+			CreateLeafPartitioner(loLon, locationsLoLon, loLat, hiLat, level+1))
 
 		p.cutPoints = append(p.cutPoints, float64(locationsLoLon))
 
 		if level == 0 {
 			p.SubPartitions = append(p.SubPartitions,
-					CreateSouthNorthPartitioners(
-						locationsLoLon, locationsHiLon, loLat, hiLat,
-						level + 1, levelLimit, cutsPerLevel,
-						weLocations, true))
+				CreateSouthNorthPartitioners(
+					locationsLoLon, locationsHiLon, loLat, hiLat,
+					level+1, levelLimit, cutsPerLevel,
+					weLocations, true))
 		} else {
 			p.SubPartitions = append(p.SubPartitions,
-					createPartitioner(
-						locationsLoLon, locationsHiLon, loLat, hiLat,
-						level + 1, levelLimit, cutsPerLevel,
-						weLocations, true))
+				createPartitioner(
+					locationsLoLon, locationsHiLon, loLat, hiLat,
+					level+1, levelLimit, cutsPerLevel,
+					weLocations, true))
 		}
 
 		p.cutPoints = append(p.cutPoints, float64(locationsHiLon))
 
 		p.SubPartitions = append(p.SubPartitions,
-			CreateLeafPartitioner(locationsHiLon, hiLon, loLat, hiLat, level + 1))
+			CreateLeafPartitioner(locationsHiLon, hiLon, loLat, hiLat, level+1))
 		return p
 	}
 
@@ -515,27 +544,27 @@ func CreateWestEastPartitioners(
 
 		// Create a sub-partition based on partitionLocations.
 		sp := createPartitioner(
-				minCoord, maxCoord, loLat, hiLat,
-				level + 1, levelLimit, cutsPerLevel,
-				partitionLocations, true)
+			minCoord, maxCoord, loLat, hiLat,
+			level+1, levelLimit, cutsPerLevel,
+			partitionLocations, true)
 
 		p.cutPoints = append(p.cutPoints, float64(maxCoord))
 		p.SubPartitions = append(p.SubPartitions, sp)
 
-		minCoord = maxCoord	
+		minCoord = maxCoord
 	}
 
 	// Remaining locations are for the final partition.
 	sp := createPartitioner(
-			minCoord, hiLon, loLat, hiLat,
-			level + 1, levelLimit, cutsPerLevel,
-			weLocations, true)
+		minCoord, hiLon, loLat, hiLat,
+		level+1, levelLimit, cutsPerLevel,
+		weLocations, true)
 	p.SubPartitions = append(p.SubPartitions, sp)
 
 	return p
 }
 func (p *WestEastPartitioners) Partition(
-		ral *RecordAndLocation) error {
+	ral *RecordAndLocation) error {
 	return p.partition(float64(ral.Lon), ral)
 }
 func (p *WestEastPartitioners) decodeXml(d *Decoder, level uint) {
@@ -570,42 +599,43 @@ func (p *WestEastPartitioners) decodeXml(d *Decoder, level uint) {
 ////////////////////////////////////////////////////////////////////////////////
 
 type LeafPartitioner struct {
-	XMLName   xml.Name `xml:"LeafPartition"`
+	XMLName xml.Name `xml:"LeafPartition"`
 	RegionBase
 	FileName string `xml:",attr"`
-	level uint
-	ch chan *RecordAndLocation
-	cwc *util.CsvWriteCloser
-	wg sync.WaitGroup
+	level    uint
+	ch       chan *RecordAndLocation
+	cwc      *util.CsvWriteCloser
+	wg       sync.WaitGroup
 }
+
 func CreateLeafPartitioner(
-		loLon, hiLon geo.Longitude, loLat, hiLat geo.Latitude,
-		level uint) *LeafPartitioner {
+	loLon, hiLon geo.Longitude, loLat, hiLat geo.Latitude,
+	level uint) *LeafPartitioner {
 	snDistance, weDistance := geo.MeasureCentralAxes(loLon, hiLon, loLat, hiLat)
 	glog.Infof(
-			"%s CreateLeafPartitioner(%v, %v, %v, %v, %d) S2N: %dm, W2E: %dm",
-			"                      "[:level],
-			loLon, hiLon, loLat, hiLat, level, int(snDistance), int(weDistance))
+		"%s CreateLeafPartitioner(%v, %v, %v, %v, %d) S2N: %dm, W2E: %dm",
+		"                      "[:level],
+		loLon, hiLon, loLat, hiLat, level, int(snDistance), int(weDistance))
 
 	fn := fmt.Sprintf("%s_%s-to-%s_%s.csv.gz",
-			loLat.FormatDMS(), loLon.FormatDMS(),
-			hiLat.FormatDMS(), hiLon.FormatDMS())
+		loLat.FormatDMS(), loLon.FormatDMS(),
+		hiLat.FormatDMS(), hiLon.FormatDMS())
 	glog.Infof("           will create %s", fn)
 
-//		// Add a header identifying the fields to the csv file.
-//		fieldNames := nextbus.VehicleCSVFieldNames()
-//		fieldNames[0] = "# " + fieldNames[0]
-//		p.csv.Write(fieldNames)
+	//		// Add a header identifying the fields to the csv file.
+	//		fieldNames := nextbus.VehicleCSVFieldNames()
+	//		fieldNames[0] = "# " + fieldNames[0]
+	//		p.csv.Write(fieldNames)
 
 	return &LeafPartitioner{
 		RegionBase: RegionBase{
-			West: loLon,
-			East: hiLon,
+			West:  loLon,
+			East:  hiLon,
 			South: loLat,
 			North: hiLat,
 		},
 		FileName: fn,
-		level: level,
+		level:    level,
 	}
 }
 func (p *LeafPartitioner) decodeXml(d *Decoder, level uint) {
@@ -620,7 +650,9 @@ func (p *LeafPartitioner) decodeXml(d *Decoder, level uint) {
 func (p *LeafPartitioner) OpenForWriting(dir string, delExisting bool) (err error) {
 	fp := filepath.Join(dir, p.FileName)
 	p.cwc, err = util.OpenCsvWriteCloser(fp, true, delExisting, 0644)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 	p.wg.Add(1)
 	p.ch = make(chan *RecordAndLocation, 50)
 	go func() {
@@ -630,10 +662,12 @@ func (p *LeafPartitioner) OpenForWriting(dir string, delExisting bool) (err erro
 		for {
 			var err error
 			select {
-			case ral, ok := <- p.ch:
-				if !ok { return }
+			case ral, ok := <-p.ch:
+				if !ok {
+					return
+				}
 				err = p.cwc.Write(ral.Record)
-			case <- ticker.C:
+			case <-ticker.C:
 				count++
 				if count > 10 {
 					err = p.cwc.Flush()
@@ -666,11 +700,19 @@ func (p *LeafPartitioner) Close() {
 	}
 }
 func (p *LeafPartitioner) FileNamesForRegion(
-		west, east geo.Longitude, south, north geo.Latitude) (names []string) {
-	if west > p.East { return }
-	if east < p.West { return }
-	if south > p.North { return }
-	if north < p.South { return }
+	west, east geo.Longitude, south, north geo.Latitude) (names []string) {
+	if west > p.East {
+		return
+	}
+	if east < p.West {
+		return
+	}
+	if south > p.North {
+		return
+	}
+	if north < p.South {
+		return
+	}
 	names = append(names, p.FileName)
 	return
 }
@@ -688,30 +730,30 @@ func (p *LeafPartitioner) generateJson(prefix string, w io.Writer) {
 // Choose a direction for partitioning based on the axis with the
 // greatest distance (i.e. try to avoid making long thin rectangles).
 func createPartitioner(
-		loLon, hiLon geo.Longitude,
-		loLat, hiLat geo.Latitude,
-		level, levelLimit uint, cutsPerLevel int,
-		sortedLocations []geo.Location,
-		sortedWestToEast bool) decoderPartitioner {
+	loLon, hiLon geo.Longitude,
+	loLat, hiLat geo.Latitude,
+	level, levelLimit uint, cutsPerLevel int,
+	sortedLocations []geo.Location,
+	sortedWestToEast bool) decoderPartitioner {
 	snDistance, weDistance := geo.MeasureCentralAxes(loLon, hiLon, loLat, hiLat)
 	glog.Infof(
-			"%s createPartitioner(%v, %v, %v, %v, %d) S2N: %dm, W2E: %dm",
-			"                      "[:level],
-			loLon, hiLon, loLat, hiLat, level, int(snDistance), int(weDistance))
+		"%s createPartitioner(%v, %v, %v, %v, %d) S2N: %dm, W2E: %dm",
+		"                      "[:level],
+		loLon, hiLon, loLat, hiLat, level, int(snDistance), int(weDistance))
 
 	if weDistance >= snDistance {
 		if weDistance > 500 {
 			return CreateWestEastPartitioners(
-					loLon, hiLon, loLat, hiLat,
-					level, levelLimit, int(cutsPerLevel),
-					sortedLocations, sortedWestToEast)
+				loLon, hiLon, loLat, hiLat,
+				level, levelLimit, int(cutsPerLevel),
+				sortedLocations, sortedWestToEast)
 		}
 	} else {
 		if snDistance > 500 {
 			return CreateSouthNorthPartitioners(
-					loLon, hiLon, loLat, hiLat,
-					level, levelLimit, int(cutsPerLevel),
-					sortedLocations, sortedWestToEast)
+				loLon, hiLon, loLat, hiLat,
+				level, levelLimit, int(cutsPerLevel),
+				sortedLocations, sortedWestToEast)
 		}
 	}
 
@@ -733,8 +775,8 @@ func avgOfLocations(locations []geo.Location) (avg geo.Location) {
 // errors (1000s of miles, e.g. I've seen a sample in the Los Angeles, CA area
 // for the MBTA in MA).
 func getLocationsNearExtrema(
-		sortedSamples []geo.Location) (
-		low, high geo.Location) {
+	sortedSamples []geo.Location) (
+	low, high geo.Location) {
 	var lowIndex int
 	if len(sortedSamples) >= 1000000 {
 		lowIndex = 200
@@ -749,13 +791,13 @@ func getLocationsNearExtrema(
 	low = avgOfLocations(sortedSamples[lowIndex/2 : lowIndex])
 
 	highIndex := len(sortedSamples) - lowIndex
-	high = avgOfLocations(sortedSamples[highIndex : highIndex + lowIndex/2])
+	high = avgOfLocations(sortedSamples[highIndex : highIndex+lowIndex/2])
 
 	return
 }
 
 func CreateAgencyPartitioner(agency string, samples []geo.Location,
-       											 levelLimit uint, cutsPerLevel uint) *AgencyPartitioner {
+	levelLimit uint, cutsPerLevel uint) *AgencyPartitioner {
 	if levelLimit < 2 {
 		glog.Fatalf("Too few levels (%d)", levelLimit)
 	}
@@ -771,8 +813,8 @@ func CreateAgencyPartitioner(agency string, samples []geo.Location,
 	minSamples := totalLeaves * 100
 	if int64(len(samples)) < minSamples {
 		glog.Fatalf(
-				"Too few location samples (%d); want at least %d samples given %d leaves in the partitioning",
-				len(samples), minSamples, totalLeaves)
+			"Too few location samples (%d); want at least %d samples given %d leaves in the partitioning",
+			len(samples), minSamples, totalLeaves)
 	}
 
 	// Start the partitioning in the direction with the greatest distance.
@@ -798,9 +840,9 @@ func CreateAgencyPartitioner(agency string, samples []geo.Location,
 
 	// Now use the median latitude and longitude for computing the
 	// longitude and latitude distances, respectively.
-	south.Lon = weLocations[len(weLocations) / 2].Lon
+	south.Lon = weLocations[len(weLocations)/2].Lon
 	north.Lon = south.Lon
-	west.Lat = snLocations[len(snLocations) / 2].Lat
+	west.Lat = snLocations[len(snLocations)/2].Lat
 	east.Lat = west.Lat
 
 	glog.Infof("south: %s", south)
@@ -821,14 +863,14 @@ func CreateAgencyPartitioner(agency string, samples []geo.Location,
 	result := &AgencyPartitioner{Agency: agency}
 	if weDistance >= snDistance {
 		result.RootPartitioner = CreateWestEastPartitioners(
-				-180, 180, -90, 90,
-				0, levelLimit, int(cutsPerLevel),
-				weLocations, true)
+			-180, 180, -90, 90,
+			0, levelLimit, int(cutsPerLevel),
+			weLocations, true)
 	} else {
 		result.RootPartitioner = CreateSouthNorthPartitioners(
-				-180, 180, -90, 90,
-				0, levelLimit, int(cutsPerLevel),
-				snLocations, false)
+			-180, 180, -90, 90,
+			0, levelLimit, int(cutsPerLevel),
+			snLocations, false)
 	}
 
 	return result
@@ -838,9 +880,10 @@ func CreateAgencyPartitioner(agency string, samples []geo.Location,
 
 type Decoder struct {
 	decoder *xml.Decoder
-	t xml.Token
-	err error
+	t       xml.Token
+	err     error
 }
+
 func (p *Decoder) String() string {
 	if p.err != nil {
 		return "Error: " + p.err.Error()
@@ -889,7 +932,7 @@ func (p *Decoder) Next() bool {
 			case xml.CharData:
 				c := p.t.(xml.CharData)
 				if len(strings.TrimSpace(string(c))) > 0 {
-//					return true
+					//					return true
 					glog.Fatalf("Unexpected chardata: %s", string(c))
 				}
 			}
@@ -903,7 +946,9 @@ func (p *Decoder) Advance() {
 	glog.V(1).Infoln("Advanced to", p)
 }
 func (p *Decoder) IsStart(name string) bool {
-	if p.err != nil || p.t == nil { return false }
+	if p.err != nil || p.t == nil {
+		return false
+	}
 	e, ok := p.t.(xml.StartElement)
 	return ok && (name == "" || e.Name.Local == name)
 }
@@ -917,7 +962,9 @@ func (p *Decoder) GetStart(name string) xml.StartElement {
 	return p.t.(xml.StartElement)
 }
 func (p *Decoder) IsEnd(name string) bool {
-	if p.err != nil || p.t == nil { return false }
+	if p.err != nil || p.t == nil {
+		return false
+	}
 	e, ok := p.t.(xml.EndElement)
 	return ok && (name == "" || e.Name.Local == name)
 }
@@ -926,6 +973,7 @@ func (p *Decoder) RequireIsEnd(name string) {
 		glog.Fatalf("Expected end of element %s, not %s", name, p)
 	}
 }
+
 //func (p *Decoder) IsCharData() bool {
 //	_, ok := p.t.(xml.CharData)
 //	return ok
@@ -997,9 +1045,9 @@ func ReadPartitionsIndex(dir string) *AgencyPartitioner {
 		glog.Fatalf("Unable to read file %s\nError: %s", fp, err)
 	}
 	a := UnmarshalAgencyPartitioner(bytes.NewReader(b))
-//	if err != nil {
-//		glog.Fatalf("Unable to decode file %s\nError: %s", fp, err)
-//	}
+	//	if err != nil {
+	//		glog.Fatalf("Unable to decode file %s\nError: %s", fp, err)
+	//	}
 	glog.Infof("Restored partition definitions from %s", fp)
 	return a
 }
@@ -1007,7 +1055,7 @@ func ReadPartitionsIndex(dir string) *AgencyPartitioner {
 ////////////////////////////////////////////////////////////////////////////////
 
 const (
-htmlHeader = ` 
+	htmlHeader = ` 
 <!DOCTYPE html>
 <html>
 	<head>
@@ -1028,20 +1076,20 @@ var partitionIndex = null, currentLevel = -1, maxLevel = -1,
 function definePartitions() {
 	return (
 `
-// Here we insert a js function that provides a function definePartitions()
-// that returns an object.  Call after maps api loaded.
-// Partition object {
-//     filename: ""  (property present only if leaf)
-//     sw: [latitude, longitude]
-//     ne: [latitude, longitude]
-//     subPartitions: array of sub partitions, property absent if leaf.
-//     // Following props added during initialization.
-//     level: integer, 0 based
-//     mapRectangle: google.maps.Rectangle, doesn't have map set until other
-//                   code does so.
-//    }
+	// Here we insert a js function that provides a function definePartitions()
+	// that returns an object.  Call after maps api loaded.
+	// Partition object {
+	//     filename: ""  (property present only if leaf)
+	//     sw: [latitude, longitude]
+	//     ne: [latitude, longitude]
+	//     subPartitions: array of sub partitions, property absent if leaf.
+	//     // Following props added during initialization.
+	//     level: integer, 0 based
+	//     mapRectangle: google.maps.Rectangle, doesn't have map set until other
+	//                   code does so.
+	//    }
 
-htmlTrailer = `
+	htmlTrailer = `
 	);
 }
 function getRandomInt(min, max) {

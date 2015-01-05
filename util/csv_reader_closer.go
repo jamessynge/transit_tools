@@ -48,7 +48,7 @@ func OpenReadCsvFile(filePath string) (crc *CsvReaderCloser, err error) {
 // Process 1 record (or the error encountered when reading a record,
 // including eof).
 type RecordProcessorFn func(source string, record []string,
-                            recordNum int, err error) error
+	recordNum int, err error) error
 
 // If fn returns non-nil, ReadCsvToFn stops reading and returns that
 // error (except for io.EOF, which is converted to nil before returning).
@@ -63,7 +63,7 @@ func ReadCsvToFn(r CsvReader, source string, fn RecordProcessorFn) (
 		}
 		if err != nil {
 			glog.Warningf("Error reading record %d from %s\nError: %s",
-										numRecords + 1, source, err)
+				numRecords+1, source, err)
 		}
 		err = fn(source, record, numRecords, err)
 		if err != nil {
@@ -99,11 +99,11 @@ func ReadCsvFileToChan(filePath string, ch chan<- []string) (
 	numRecords int, err error) {
 	return ReadCsvFileToFn(filePath,
 		func(filePath string, record []string,
-         recordNum int, err error) error {
-      if err != nil {
-      	return err
-      }
+			recordNum int, err error) error {
+			if err != nil {
+				return err
+			}
 			ch <- record
 			return nil
-    })
+		})
 }

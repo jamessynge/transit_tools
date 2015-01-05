@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/jamessynge/transit_tools/compare"
 	"fmt"
+	"github.com/jamessynge/transit_tools/compare"
 	"github.com/jamessynge/transit_tools/geo"
 	"github.com/jamessynge/transit_tools/nextbus"
 	"time"
@@ -23,9 +23,7 @@ func main() {
 <lastTime time="1350562779906"/>
 </body>`
 
-
 	unmarshalNextbusXml
-
 
 	locations, err := nextbus.ParseXmlVehicleLocations(s)
 	if err != nil {
