@@ -4,6 +4,8 @@ import (
 	"compress/gzip"
 	"encoding/csv"
 	"os"
+
+	"github.com/golang/glog"
 )
 
 type CsvWriteCloser struct {
@@ -25,8 +27,15 @@ func NewCsvWriteCloser(fwc *os.File, compress bool) *CsvWriteCloser {
 
 func OpenCsvWriteCloser(
 	filePath string, compress, delExisting bool, perm os.FileMode) (*CsvWriteCloser, error) {
+	glog.V(1).Infof("OpenCsvWriteCloser(%q, compress=%v, delExisting=%v, %b)",
+		filePath, compress, delExisting, perm)
+
 	if delExisting && Exists(filePath) {
-		os.Remove(filePath)
+		if err := os.Remove(filePath); err == nil {
+			glog.V(1).Infof("Deleted existing file %s", filePath)
+		} else {
+			glog.Warningf("Unable to delete existing file %s", filePath)
+		}
 	}
 	//	flag := os.O_WRONLY
 	//	if Exists(filePath) {

@@ -280,7 +280,7 @@ func BodyIsHtml(response *http.Response, body []byte) bool {
 
 func GetServerTime(response *http.Response) (serverTime time.Time, found bool) {
 	found = false
-	serverTimeStr := response.Header.Get("Time")
+	serverTimeStr := response.Header.Get("Date")
 	if serverTimeStr != "" {
 		var err error
 		serverTime, err = http.ParseTime(serverTimeStr)
@@ -313,15 +313,15 @@ func NewRateRegulatedTransport(regulator RateRegulator) *http.Transport {
 }
 
 func NewClientAndTransport() *http.Client {
-		transport := &http.Transport{
-        Proxy: http.ProxyFromEnvironment,
-        Dial: (&net.Dialer{
-                Timeout:   30 * time.Second,
-                KeepAlive: 30 * time.Second,
-        }).Dial,
-        TLSHandshakeTimeout: 10 * time.Second,
-		}
-		return &http.Client{
-			Transport: transport,
-		}
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
+	return &http.Client{
+		Transport: transport,
+	}
 }

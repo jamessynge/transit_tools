@@ -3,8 +3,8 @@ package fit
 import (
 	"fmt"
 	"github.com/jamessynge/transit_tools/geom"
-	"math"
 	"github.com/jamessynge/transit_tools/stats"
+	"math"
 )
 
 /*
@@ -48,13 +48,12 @@ Since we assume that the bus location data has no particular bias to the
 latitude and longitude (GPS) data, we further assume that delta = 1.
 
 */
-func FitLineToPointsOR(data stats.Data2DSource) (line *geom.TwoPointLine, err error) {
-	if data.Len() < 2 {
-		err = fmt.Errorf("not enough points: %d", data.Len())
+
+func OrthoRegrFitLineToStats(statistics *stats.Data2DStats) (line *geom.TwoPointLine, err error) {
+	if statistics.N < 2 {
+		err = fmt.Errorf("not enough points: %d", statistics.N)
 		return
 	}
-
-	statistics := stats.ComputeData2DStats(data)
 
 	// Terms of quadratic formula, whose root leads us to the minimum of the sum
 	// of squared residuals (i.e. best fit using orthogonal distance, squared,
@@ -107,123 +106,13 @@ func FitLineToPointsOR(data stats.Data2DSource) (line *geom.TwoPointLine, err er
 	pt1 := geom.Point{x1, slope*x1 + y_intercept}
 	pt2 := geom.Point{x2, slope*x2 + y_intercept}
 	return geom.LineFromTwoPoints(pt1, pt2), nil
-
-	/*
-		numerator := n*sum_xy - sum_x*sum_y
-		denominator := n*sum_xx - sum_x*sum_x
-
-		if denominator != 0 {
-			m = numerator / denominator
-			if -1 <= m && m <= 1 {
-				// Slope within 45deg of horizontal
-				b = (sum_y - m*sum_x) / n
-				yIsDominant = false
-				//			fmt.Printf("%v  %v %v %v %v\n     =>  %v %v  X dominant\n\n",
-				//								 n, sum_x, sum_y, sum_xy, sum_xx, m, b)
-				return
-			}
-		}
-
-		// Slope is steep, where I found that the accuracy
-		// drops, especially of the y intercept.  Therefore,
-		// returning the line based on Y being the independent
-		// variable (i.e run over rise, and X intercept).
-
-		yIsDominant = true
-		denominator = n*sum_yy - sum_y*sum_y
-		if denominator == 0 {
-			err = fmt.Errorf(
-				"denominator is zero; n=%v sum_x=%v sum_y=%v sum_xx=%v sum_xy=%v sum_yy=%v",
-				n, sum_x, sum_y, sum_xx, sum_xy, sum_yy)
-		}
-
-		m = numerator / denominator
-		b = (sum_x - m*sum_y) / n
-
-	*/
-
-	err = fmt.Errorf("invalid stats for producing a line: %#v", statistics)
-	return
 }
 
-/*
-
-
-// pt1 and pt2 must be distinct else NearestPointTo will divide by zero.
-func LineFromTwoPoints(pt1, pt2 Point) Line {
-
-
-	// Note: this is the naive way to compute these values, which does not
-	// account for arithmetic errors creeping in.  See these:
-	//   https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
-	//   https://en.wikipedia.org/wiki/Compensated_summation
-	//   https://en.wikipedia.org/wiki/Pairwise_summation
-	// TODO Fix this, because we expect to have one of the bad cases: the
-	// variance will be very small relative to the mean (i.e. even if we map the
-	// Lat-Lon coords to meters, the mean will typically be somewhere in the range
-	// [-10,000, 10,000], while the standard deviation will be in the range of a
-	// few meters, so the variance will likely be in the range [5,100]).
-
-	var sum_x, sum_y, sum_xx, sum_xy, sum_yy float64
-	for i := range points {
-		x, y := points[i].X, points[i].Y
-		sum_x += x
-		sum_y += y
-		sum_xx += (x * x)
-		sum_xy += (x * y)
-		sum_yy += (y * y)
+func FitLineToPointsOR(data stats.Data2DSource) (line *geom.TwoPointLine, err error) {
+	if data.Len() < 2 {
+		err = fmt.Errorf("not enough points: %d", data.Len())
+		return
 	}
 
-	x_mean := sum_x / n
-	y_mean := sum_y / n
-	s_xx := sum_xx/n - x_mean*x_mean
-	s_xy := sum_xy/n - x_mean*y_mean
-	s_yy := sum_yy/n - y_mean*y_mean
-
-	// Terms of quadratic formula, whose root leads us to the minimum of the sum
-	// of squared residuals (i.e. best fit using orthogonal distance, squared,
-	// from the data points to the line we determine).
-
-	delta := 1.0  // Ratio of varians of the errors: var_y_error / var_x_error
-							  // For now assume they have the same error, since we have no
-							  // reason to assume otherwise.
-	a := s_xy
-	bb := delta * s_xx - s_yy
-	c := s_xy
-
-	numerator := -bb + math.Sqrt(bb*bb + 4*delta*a*c)
-	denominator := 2 * delta * s_xy
-
-	if denominator != 0 {
-		m = numerator / denominator
-		if -1 <= m && m <= 1 {
-			// Slope within 45deg of horizontal
-			b = (sum_y - m*sum_x) / n
-			yIsDominant = false
-			//			fmt.Printf("%v  %v %v %v %v\n     =>  %v %v  X dominant\n\n",
-			//								 n, sum_x, sum_y, sum_xy, sum_xx, m, b)
-			return
-		}
-	}
-
-	// Slope is steep, where I found that the accuracy
-	// drops, especially of the y intercept.  Therefore,
-	// returning the line based on Y being the independent
-	// variable (i.e run over rise, and X intercept).
-
-	yIsDominant = true
-	denominator = n*sum_yy - sum_y*sum_y
-	if denominator == 0 {
-		err = fmt.Errorf(
-			"denominator is zero; n=%v sum_x=%v sum_y=%v sum_xx=%v sum_xy=%v sum_yy=%v",
-			n, sum_x, sum_y, sum_xx, sum_xy, sum_yy)
-	}
-
-	m = numerator / denominator
-	b = (sum_x - m*sum_y) / n
-
-	//	fmt.Printf("%v  %v %v %v %v\n     =>  %v %v   Y dominant\n\n",
-	//						 n, sum_y, sum_x, sum_xy, sum_yy, m, b)
-	return
+	return OrthoRegrFitLineToStats(stats.ComputeData2DStats(data))
 }
-*/

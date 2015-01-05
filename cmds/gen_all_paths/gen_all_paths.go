@@ -1,13 +1,14 @@
 package main
 
 import (
-"flag"
+	"flag"
 	"fmt"
+
+	"github.com/golang/glog"
+
 	"github.com/jamessynge/transit_tools/nextbus"
 	"github.com/jamessynge/transit_tools/util"
 )
-
-
 
 var (
 	agencyFlag = flag.String(
@@ -23,15 +24,23 @@ var (
 
 func main() {
 	flag.Parse()
-	if len(*agencyFlag) == 0 { panic("Need -agency"); }
-	if len(*routeConfigFlag) == 0 { panic("Need -route-config"); }
-	if len(*allPathsFlag) == 0 { panic("Need -all-paths"); }
-	if !util.IsDirectory(*routeConfigFlag) { panic("-route-config must specify a directory"); }
+	if len(*agencyFlag) == 0 {
+		glog.Fatal("Need -agency")
+	}
+	if len(*routeConfigFlag) == 0 {
+		glog.Fatal("Need -route-config")
+	}
+	if len(*allPathsFlag) == 0 {
+		glog.Fatal("Need -all-paths")
+	}
+	if !util.IsDirectory(*routeConfigFlag) {
+		glog.Fatal("-route-config must specify a directory")
+	}
 
 	agency := nextbus.NewAgency(*agencyFlag)
 	err := nextbus.ParseRouteConfigsDir(agency, *routeConfigFlag)
 	if err != nil {
-		panic(err)
+		glog.Fatal(err)
 	}
 	fmt.Printf("Parsed %d routes, %d directions, %d stops, %d locations, %d paths\n",
 		len(agency.Routes), len(agency.Directions), len(agency.Stops), len(agency.Locations), agency.NumPaths())

@@ -1,16 +1,16 @@
 // go run check_csv_order.go C:/temp/fetch_vehicles5/csv  C:/temp/fetch_vehicles5b/csv  C:/temp/fetch_vehicles5c  C:/temp/fetch_vehicles5d  C:/temp/fetch_vehicles5e
-package main 
+package main
 
 import (
-"flag"
-"github.com/golang/glog"
-"io"
-"io/ioutil"
-"os"
-"path/filepath"
-"strconv"
-"strings"
-"github.com/jamessynge/transit_tools/util"
+	"flag"
+	"github.com/golang/glog"
+	"github.com/jamessynge/transit_tools/util"
+	"io"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 func ProcessCsvFile(path string) {
@@ -22,7 +22,7 @@ func ProcessCsvFile(path string) {
 	defer crc.Close()
 	numRecords := 0
 	fileOk := true
-	var lastTime int64 = 946684800000  // 2000-01-01 @ 0:0:0.000 UTC
+	var lastTime int64 = 946684800000 // 2000-01-01 @ 0:0:0.000 UTC
 	var lastRecord []string
 	for {
 		thisRecord, err := crc.Read()
@@ -45,7 +45,7 @@ func ProcessCsvFile(path string) {
 			glog.Warningf("Time moving backwards at record %d of file %s", numRecords, path)
 			glog.Warningf("lastRecord: %v", lastRecord)
 			glog.Warningf("thisRecord: %v", thisRecord)
-			glog.Warningf("  delta Ms: %d", thisTime - lastTime)
+			glog.Warningf("  delta Ms: %d", thisTime-lastTime)
 			fileOk = false
 			continue
 		}
@@ -99,9 +99,9 @@ func main() {
 	for _, arg := range os.Args[1:] {
 		matches, _ := filepath.Glob(arg)
 		if len(matches) > 0 {
-//			glog.Infof("matches: %v", matches)
+			//			glog.Infof("matches: %v", matches)
 			for _, match := range matches {
-//				glog.Infof("%d: %s", ndx, match)
+				//				glog.Infof("%d: %s", ndx, match)
 				Process(match)
 			}
 		} else {

@@ -54,28 +54,28 @@ import (
 
 var storageRootFlag = flag.String(
 	"storage_root", "",
-	"Root directory in which to store the agency directory, and under that " +
-	"the raw, csv and log directories.")
+	"Root directory in which to store the agency directory, and under that "+
+		"the raw, csv and log directories.")
 
 // "mbta" is my primary interest, but "ccrta" is convenient because it is a
 // small agency so the amount of data to be fetched is relatively small.
 var agencyFlag = flag.String(
 	"agency", "",
-	"Transit agency/organization for which to fetch vehicle locations and " +
-	"route schedules and configurations.")
+	"Transit agency/organization for which to fetch vehicle locations and "+
+		"route schedules and configurations.")
 
 var setLogDirFlag = flag.Bool(
 	"set_log_dir", true,
-	"Set --log_dir default value immediately after parsing flags so that " +
-	"messages are logged there immediately, and not after the file is rotated.")
+	"Set --log_dir default value immediately after parsing flags so that "+
+		"messages are logged there immediately, and not after the file is rotated.")
 
 var fetchIntervalFlag = flag.Float64(
 	"fetch_interval", 0,
 	"Seconds between fetches of vehicle locations")
 var extraDurationFlag = flag.Uint(
 	"extra_duration", 60,
-	"Seconds to subtract from last fetch time, in a probably vain attempt to " +
-	"get more accuracy in the time of last report for a vehicle")
+	"Seconds to subtract from last fetch time, in a probably vain attempt to "+
+		"get more accuracy in the time of last report for a vehicle")
 
 // Rate limit flag defaults set to 100,000 per second, just under 2MB/20s,
 // the limit allowed by NextBus, but expressed such that the max available will
@@ -86,15 +86,17 @@ var rateLimitBytesFlag = flag.Uint(
 	"rate_limit_bytes", 100000,
 	"Maximum number of bytes to fetch in --rate_limit_interval")
 var rateLimitIntervalFlag = flag.Duration(
-	"rate_limit_interval", 1 * time.Second,
-	"Time period (e.g. 1s) over which to permit --rate_limit_bytes to be " +
-	"exchanged with NextBus")
+	"rate_limit_interval", 1*time.Second,
+	"Time period (e.g. 1s) over which to permit --rate_limit_bytes to be "+
+		"exchanged with NextBus")
 
 // Define a type, hoursSlice, that satisfies the flag.Value interface
 type hoursSlice []int
+
 func (p *hoursSlice) String() string {
-    return fmt.Sprint(*p)
+	return fmt.Sprint(*p)
 }
+
 // Split the comma-separated list of integer hours (0 to 23) in the string.
 func (p *hoursSlice) Set(value string) error {
 	// Delete whatever value is already present.
@@ -118,12 +120,14 @@ func (p *hoursSlice) Set(value string) error {
 	sort.Ints(*p)
 	return nil
 }
+
 var configHours hoursSlice
+
 func init() {
 	// Tie the command-line flag to the configHours variable and
 	// set a usage message.
 	flag.Var(&configHours, "config_hours",
-			"Comma-separated list of the hours of the day (0 to 23) at which " +
+		"Comma-separated list of the hours of the day (0 to 23) at which "+
 			"to fetch route schedules and configurations.")
 }
 
@@ -137,12 +141,12 @@ var gob_port_flag = flag.Uint(
 */
 
 type priorityFetcher struct {
-	hlhf util.HiLoHttpFetcher
+	hlhf       util.HiLoHttpFetcher
 	hiPriority bool
 }
 
 func (p *priorityFetcher) Do(request *http.Request) (
-		*util.HttpFetchResponse, error) {
+	*util.HttpFetchResponse, error) {
 	return p.hlhf.Do(p.hiPriority, request)
 }
 
@@ -239,14 +243,14 @@ func main() {
 
 	// Start rate regulator to limit the rate at which we send to/receive from
 	// the NextBus api service.
-	if (uint32(*rateLimitBytesFlag) <= 0) {
+	if uint32(*rateLimitBytesFlag) <= 0 {
 		glog.Fatal("Must specify a positive value for --rate_limit_bytes")
 	}
-	if (*rateLimitIntervalFlag <= 0) {
+	if *rateLimitIntervalFlag <= 0 {
 		glog.Fatal("Must specify a positive value for --rate_limit_interval")
 	}
 	regulator, err := util.NewRateRegulator(
-			0, uint32(*rateLimitBytesFlag), *rateLimitIntervalFlag)
+		0, uint32(*rateLimitBytesFlag), *rateLimitIntervalFlag)
 	if err != nil {
 		glog.Fatal("Failed to create rate regulator: ", err)
 	}
@@ -255,25 +259,25 @@ func main() {
 	// vehicle location requests, and a low one for the config requests.
 	hlhf := CreateHiLoHttpFetcher(regulator)
 	lohf := &priorityFetcher{
-		hlhf: hlhf,
+		hlhf:       hlhf,
 		hiPriority: false,
 	}
 	hihf := &priorityFetcher{
-		hlhf: hlhf,
+		hlhf:       hlhf,
 		hiPriority: true,
 	}
 
 	// Start fetching, archiving and aggregating of vehicle locations.
-	interval := time.Duration(*fetchIntervalFlag * 1000000) * time.Microsecond
+	interval := time.Duration(*fetchIntervalFlag*1000000) * time.Microsecond
 	stopFetchAndArchiveCh := make(chan chan bool, 1)
 	nblocations.StartFetchAndArchive(*agencyFlag, interval, *extraDurationFlag,
-																	 hihf, agencyDir, stopFetchAndArchiveCh)
+		hihf, agencyDir, stopFetchAndArchiveCh)
 	glog.Info("Started location fetcher.")
 
 	// Start fetching the semi-static agency configuration data.
 	stopPCFCh := make(chan chan bool, 1)
 	go configfetch.PeriodicConfigFetcher(*agencyFlag, configRootDir, lohf,
-																			 []int(configHours), stopPCFCh)
+		[]int(configHours), stopPCFCh)
 	glog.Info("Started config fetcher.")
 
 	// TODO Start http server to report status (e.g. names of files currently
@@ -311,13 +315,13 @@ func main() {
 	// Wait for them to finish.
 	for stoppedCh1 != nil || stoppedCh2 != nil {
 		select {
-		case <- stoppedCh1:
+		case <-stoppedCh1:
 			glog.Info("Stopped location fetcher.")
 			stoppedCh1 = nil
-		case <- stoppedCh2:
+		case <-stoppedCh2:
 			glog.Info("Stopped config fetcher.")
 			stoppedCh2 = nil
-		case sig = <- signalChan:
+		case sig = <-signalChan:
 			switch sig {
 			case syscall.SIGINT:
 				glog.Info("syscall.SIGINT")

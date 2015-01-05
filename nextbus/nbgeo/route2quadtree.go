@@ -1,8 +1,11 @@
 package nbgeo
 
 import (
+	"strings"
+
+	"github.com/golang/glog"
+
 	"github.com/jamessynge/transit_tools/geom"
-	"log"
 	"github.com/jamessynge/transit_tools/nextbus"
 )
 
@@ -21,9 +24,10 @@ func NewRouteToQuadTreeMap(agency *nextbus.Agency) *RouteToQuadTreeMap {
 	for _, route := range agency.Routes {
 		qt := NewQuadTreeWithPaths(route.Paths)
 		if qt == nil {
-			log.Printf("No paths for route '%s' (tag %s)", route.Title, route.Tag)
+			glog.Infof("No paths for route '%s' (tag %s)", route.Title, route.Tag)
 			continue
 		}
+		glog.Infof("Created quadtree for route %s with bounds: %v", route.Title, qt.Bounds())
 		p.rt2qt[route.Tag] = qt
 		for dirTag := range route.Directions {
 			p.dt2qt[dirTag] = qt
@@ -32,6 +36,7 @@ func NewRouteToQuadTreeMap(agency *nextbus.Agency) *RouteToQuadTreeMap {
 	return p
 }
 
+// Given a vehicle location and tolerances (dx, dy),
 func (p *RouteToQuadTreeMap) VLToPaths(
 	vl *nextbus.VehicleLocation, dx, dy float64) []*nextbus.Path {
 	rqt := p.rt2qt[vl.RouteTag]
@@ -40,14 +45,19 @@ func (p *RouteToQuadTreeMap) VLToPaths(
 	if len(rPaths) == 0 {
 		// Search a larger area if the original bounds were too tight.
 		rPaths = NearbyPaths(rqt, vl.Location, dx*16, dy*16)
+		glog.V(1).Infof("Expanded search yielded %d paths", len(rPaths))
 	}
-	if rqt != dqt {
+	if dqt != nil && rqt != dqt {
+		if !strings.HasPrefix(vl.RouteTag, vl.DirTag) {
+			glog.V(1).Infof("Dir tag (%s) isn't correct for route tag (%s)", vl.DirTag, vl.RouteTag)
+		}
 		// The dirTag doesn't identify a direction of the route identified
 		// by routeTag). Also search for paths the route of dirTag.
 		dPaths := NearbyPaths(dqt, vl.Location, dx, dy)
 		if len(dPaths) == 0 {
 			// Search a larger area if the original bounds were too tight.
 			dPaths = NearbyPaths(dqt, vl.Location, dx*16, dy*16)
+			glog.V(1).Infof("Expanded search yielded %d paths", len(dPaths))
 		}
 		if len(dPaths) > 0 {
 			if len(rPaths) > 0 {

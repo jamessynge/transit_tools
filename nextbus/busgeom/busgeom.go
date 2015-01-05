@@ -5,9 +5,9 @@ package busgeom
 
 import (
 	"github.com/jamessynge/transit_tools/geom"
+	"github.com/jamessynge/transit_tools/stats"
 	"log"
 	"math"
-	"github.com/jamessynge/transit_tools/stats"
 )
 
 const (

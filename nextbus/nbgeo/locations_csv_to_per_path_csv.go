@@ -1,16 +1,16 @@
 package nbgeo
 
 import (
-	"github.com/jamessynge/transit_tools/nextbus"
-	//"encoding/csv"
-	//	"github.com/jamessynge/transit_tools/geom"
-	//"io"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sync"
+
+	"github.com/golang/glog"
+
+	//	"github.com/jamessynge/transit_tools/geom"
+	"github.com/jamessynge/transit_tools/nextbus"
 	"github.com/jamessynge/transit_tools/util"
 )
 
@@ -41,21 +41,26 @@ func recordWriter(ch chan []string, wc *util.CsvWriteCloser,
 	defer wc.Close()
 
 	count := 0
-	nextAnnounce := 128
+	nextAnnounce := 100
+	announceStep := 100
 	for {
 		record, ok := <-ch
 		if !ok {
+			glog.Infof("After %d records, closing %s", count, filePath)
 			return
 		}
 		err := wc.Write(record)
 		if err != nil {
-			log.Printf("Error writing to %s\n\t%v", filePath, err)
+			glog.Warningf("Error writing to %s\n\t%v", filePath, err)
 			return
 		}
 		count++
 		if count >= nextAnnounce {
-			log.Printf("Wrote %d records to %s", count, filePath)
-			nextAnnounce *= 2
+			glog.Infof("Wrote %d records to %s", count, filePath)
+			if nextAnnounce == 10 * announceStep {
+				announceStep = nextAnnounce
+			}
+			nextAnnounce += announceStep
 			wc.Flush()
 		}
 	}
@@ -130,7 +135,7 @@ func locationsToPerPathFilesWorker(
 		}
 		vl, err := nextbus.CSVFieldsToVehicleLocation(record)
 		if err != nil {
-			log.Printf("Error parsing field location record: %v\n\terr: %v",
+			glog.Warningf("Error parsing field location record: %v\n\terr: %v",
 				record, err)
 			// TODO Could add an error output channel/file to make it easier to
 			// debug later.
@@ -141,13 +146,13 @@ func locationsToPerPathFilesWorker(
 			//			log.Printf("Did NOT match any paths: %v", vl)
 			err = outputChans.Write(-1, record)
 			if err != nil {
-				log.Printf("Failed to write record, error: %v", err)
+				glog.Warningf("Failed to write record, error: %v", err)
 			}
 		} else {
 			for _, path := range paths {
 				err = outputChans.Write(path.Index, record)
 				if err != nil {
-					log.Printf("Failed to write record, error: %v", err)
+					glog.Warningf("Failed to write record, error: %v", err)
 				}
 			}
 		}

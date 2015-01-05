@@ -5,8 +5,8 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/jamessynge/transit_tools/nextbus"
-	"time"
 	"github.com/jamessynge/transit_tools/util"
+	"time"
 )
 
 const (
@@ -27,9 +27,9 @@ func ComputeT(agency string, lastTime time.Time, extraSeconds uint) int64 {
 				// Nextbus says don't request more than 5 minutes back, but you can
 				// specify t=0 and will get back as much as 15 minutes of data.
 				t = 0
-				v2.Info("since:", since,"   setting t=0")
+				v2.Info("since:", since, "   setting t=0")
 			}
-		} else if extraSeconds >= 5 * 60 {
+		} else if extraSeconds >= 5*60 {
 			// NextBus states that t may be no more than 5 mintes in the past, but
 			// also states that if t=0 they will return the most recent reports from
 			// all buses, up to 15 minutes in the past.

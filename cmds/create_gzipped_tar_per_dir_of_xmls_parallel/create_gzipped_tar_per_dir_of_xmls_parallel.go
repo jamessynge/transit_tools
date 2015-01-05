@@ -32,8 +32,8 @@ func IsNewer(path_a, path_b string) bool {
 	}
 	stat_b, err := os.Stat(path_b)
 	if err == nil && stat_a.ModTime().After(stat_b.ModTime()) {
-		log.Printf("%s modified at %s", path_a, stat_a.ModTime().String()) 
-		log.Printf("%s modified at %s", path_b, stat_b.ModTime().String()) 
+		log.Printf("%s modified at %s", path_a, stat_a.ModTime().String())
+		log.Printf("%s modified at %s", path_b, stat_b.ModTime().String())
 		return true
 	}
 	return false
@@ -64,6 +64,7 @@ func TimeFileName(name string) string {
 // Parse a date of form <YYYYMMDD> or <YYYY>-<MM>-<DD>.
 var date_re *regexp.Regexp
 var dash_date_re *regexp.Regexp
+
 func ParseDate(s string) (yyyy, mm, ss string) {
 	if date_re == nil {
 		date_re = regexp.MustCompile(`^(\d{4})(\d{2})(\d{2})$`)
@@ -135,9 +136,9 @@ func TarXmlDir(dirname string, tar_path string) {
 		if err := outf.Close(); err != nil {
 			log.Fatalf("Error closing file writer: %v", err)
 		}
-		if (have_latest_modtime) {
-      currenttime := time.Now().Local()
-      // Ignoring errors
+		if have_latest_modtime {
+			currenttime := time.Now().Local()
+			// Ignoring errors
 			err = os.Chtimes(temp_file_path, currenttime, latest_modtime)
 			if err != nil {
 				log.Printf("Ignoring error from os.Chtimes: %v", err)
@@ -150,7 +151,7 @@ func TarXmlDir(dirname string, tar_path string) {
 			err = os.Rename(temp_file_path, tar_path)
 			if err != nil {
 				log.Fatalf("Rename error: %v\nOld name: %s\nNew name: %s",
-								   err, temp_file_path, tar_path)
+					err, temp_file_path, tar_path)
 			}
 			log.Printf("Finished writing: %s", tar_path)
 		}
@@ -194,7 +195,7 @@ func TarXmlDir(dirname string, tar_path string) {
 			// All done with the xml files.
 			closed = true
 			have_latest_modtime = false // Seems the file dates are later
-																  // than the folder dates!
+			// than the folder dates!
 			break
 		}
 		num_files++
@@ -215,7 +216,7 @@ func TarXmlDir(dirname string, tar_path string) {
 			num_filebody_chan_not_empty++
 			sum_filebody_chan_len += l
 		}
-		filebody, ok := <- filebody_chan
+		filebody, ok := <-filebody_chan
 		if !ok {
 			// Programming bug.
 			log.Fatal("filebody_chan closed early!")
@@ -232,8 +233,8 @@ func TarXmlDir(dirname string, tar_path string) {
 			// Programming bug, or a narrow timing window when file has just been
 			// created, but not yet flushed/closed by writer.
 			log.Fatalf("FileInfo.Size and len(filebody) aren't the same!\n%v != %v",
-			           elem.Size(), len(filebody))
-	  }
+				elem.Size(), len(filebody))
+		}
 		if _, err := archive_writer.Write(filebody); err != nil {
 			log.Printf("Error writing tar body: %v", err)
 			tar_path = "" // Prevent renaming
@@ -244,14 +245,14 @@ func TarXmlDir(dirname string, tar_path string) {
 			have_latest_modtime = true
 		}
 		if false {
-	  	if elem.Name() != out_name {
+			if elem.Name() != out_name {
 				log.Printf("Added to archive: %s  (was %s)", out_name, elem.Name())
 			} else {
 				log.Printf("Added to archive: %s", out_name)
 			}
 		}
 	}
-	log.Printf("num_files: %v", num_files) 
+	log.Printf("num_files: %v", num_files)
 	log.Printf("num_fileinfo_chan_not_empty: %v", num_fileinfo_chan_not_empty)
 	log.Printf("num_filebody_chan_not_empty: %v", num_filebody_chan_not_empty)
 	log.Printf("sum_fileinfo_chan_len: %v", sum_fileinfo_chan_len)

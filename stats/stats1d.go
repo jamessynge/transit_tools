@@ -2,9 +2,9 @@ package stats
 
 import (
 	"fmt"
+	"github.com/jamessynge/transit_tools/util"
 	"log"
 	"math"
-	"github.com/jamessynge/transit_tools/util"
 )
 
 func Data1DWeightedMedian(source Data1DSource) (value float64, index int) {

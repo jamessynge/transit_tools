@@ -59,6 +59,7 @@ func TimeFileName(name string) string {
 // Parse a date of form <YYYYMMDD> or <YYYY>-<MM>-<DD>.
 var date_re *regexp.Regexp
 var dash_date_re *regexp.Regexp
+
 func ParseDate(s string) (yyyy, mm, ss string) {
 	if date_re == nil {
 		date_re = regexp.MustCompile(`^(\d{4})(\d{2})(\d{2})$`)

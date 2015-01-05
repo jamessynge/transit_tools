@@ -1,11 +1,13 @@
 // Support for unmarshalling the message produced by
 //   http://webservices.nextbus.com/service/publicXMLFeed?command=vehicleLocations&a=mbta
 
-package unmarshal_vehicle_locations;
+package unmarshal_vehicle_locations
+
 import (
-"encoding/xml"
-"io"
+	"encoding/xml"
+	"io"
 )
+
 type VehicleElement struct {
 	Id              string  `xml:"id,attr"`
 	RouteTag        string  `xml:"routeTag,attr"`
@@ -30,6 +32,7 @@ type BodyElement struct {
 	Vehicles []*VehicleElement `xml:"vehicle"`
 	LastTime *LastTimeElement  `xml:"lastTime"`
 }
+
 func UnmarshalVehicleLocationsBytes(data []byte) (*BodyElement, error) {
 	body := &BodyElement{}
 	err := xml.Unmarshal([]byte(data), body)

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 	"time"
-	
+
 	"reflect"
 
 	"github.com/jamessynge/transit_tools/compare"
@@ -25,8 +25,8 @@ type testflags struct {
 	fs *flag.FlagSet
 
 	// Flag vars with defaults
-	localDef *time.Location
-	utcDef *time.Location
+	localDef   *time.Location
+	utcDef     *time.Location
 	chicagoDef *time.Location
 
 	// Flag vars without defaults
@@ -41,35 +41,35 @@ func NewTestFlags(t *testing.T) *testflags {
 		chicago = LoadLocation("America/Chicago", t)
 		usEastern = LoadLocation("US/Eastern", t)
 		samoa = LoadLocation("US/Samoa", t)
-		gmtMinus12 = LoadLocation("Etc/GMT-12", t)  // Zero population TZ
+		gmtMinus12 = LoadLocation("Etc/GMT-12", t) // Zero population TZ
 	}
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
 	tf := &testflags{
-		fs: fs,
-		localDef: time.Local,
-		utcDef: time.UTC,
+		fs:         fs,
+		localDef:   time.Local,
+		utcDef:     time.UTC,
 		chicagoDef: chicago,
 	}
 	NewTimeLocationVarFlagSet(
-			fs, &tf.localDef, "LocalDefault", "local default usage")
+		fs, &tf.localDef, "LocalDefault", "local default usage")
 	NewTimeLocationVarFlagSet(
-			fs, &tf.utcDef, "UTCDefault", "utc default usage")
+		fs, &tf.utcDef, "UTCDefault", "utc default usage")
 	NewTimeLocationVarFlagSet(
-			fs, &tf.chicagoDef, "ChicagoDefault", "chicago default usage")
+		fs, &tf.chicagoDef, "ChicagoDefault", "chicago default usage")
 	NewTimeLocationVarFlagSet(
-			fs, &tf.tl1, "tl1", "tl2 usage")
+		fs, &tf.tl1, "tl1", "tl2 usage")
 	NewTimeLocationVarFlagSet(
-			fs, &tf.tl2, "tl2", "tl2 usage")
+		fs, &tf.tl2, "tl2", "tl2 usage")
 	return tf
 }
 
-func (p *testflags) Parse(args ... string) error {
+func (p *testflags) Parse(args ...string) error {
 	return p.fs.Parse(args)
 }
 
 func ExpectEQTimeLocations(a, b *time.Location, t *testing.T) {
 	config := new(compare.Config)
-//	config.Logger = t
+	//	config.Logger = t
 	eq, diffs := compare.DeepCompare3(a, b, config)
 	if !eq || len(diffs) > 0 {
 		t.Errorf(" diffs: %s", diffs)
@@ -99,10 +99,10 @@ func TestTimeLocationVarFlagOverrideDefault(t *testing.T) {
 	tf := NewTestFlags(t)
 
 	err := tf.Parse("--LocalDefault=Etc/GMT-12",
-	                "--UTCDefault=America/Chicago",
-	                "--ChicagoDefault=US/Eastern",
-	                "--tl1=UTC",
-	                "--tl2", "Local")
+		"--UTCDefault=America/Chicago",
+		"--ChicagoDefault=US/Eastern",
+		"--tl1=UTC",
+		"--tl2", "Local")
 	if err != nil {
 		t.Fatalf("Unable to parse empty command line: %s", err)
 	}
@@ -166,10 +166,6 @@ func TestTimeLocationApplied(t *testing.T) {
 	t2 := makeTime(LoadLocation("Etc/GMT-1", t))
 	delta := t1a.Sub(t2)
 	fmt.Printf("delta: %s\n", delta)
-	
 
-
-
-	
 	t.Fail()
 }

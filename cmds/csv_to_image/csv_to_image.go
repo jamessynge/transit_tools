@@ -5,17 +5,17 @@ import (
 	//	"fmt"
 	"encoding/csv"
 	"github.com/jamessynge/transit_tools/geo"
+	"github.com/jamessynge/transit_tools/nextbus"
+	"github.com/jamessynge/transit_tools/util"
+	"image"
+	"image/color"
+	"image/png"
 	"io"
 	"log"
-	"github.com/jamessynge/transit_tools/nextbus"
-	"path/filepath"
-	"github.com/jamessynge/transit_tools/util"
-	"sort"
-	"image"
-	"image/png"
-	"image/color"
 	"math"
 	"os"
+	"path/filepath"
+	"sort"
 )
 
 type LocationCensus struct {
@@ -107,20 +107,20 @@ func (p *LocationCensus) Histogram() IntensityCountSlice {
 	return MapToHistogram(histogramMap)
 }
 func (p *LocationCensus) HistogramAndCDF() (
-		histogram, cdf IntensityCountSlice) {
+	histogram, cdf IntensityCountSlice) {
 	histogram = p.Histogram()
 	cdf = HistogramToCDF(histogram)
 	return
 }
 
 func (p IntensityCountSlice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
-func (p IntensityCountSlice) Len() int { return len(p) }
+func (p IntensityCountSlice) Len() int      { return len(p) }
 func (p IntensityCountSlice) Less(i, j int) bool {
 	return p[i].Intensity < p[j].Intensity
 }
 
 func MapToHistogram(histogramMap map[uint32]uint32) (
-		histogram IntensityCountSlice) {
+	histogram IntensityCountSlice) {
 	histogram = make(IntensityCountSlice, len(histogramMap))
 	var ndx int
 	for intensity, count := range histogramMap {
@@ -169,9 +169,9 @@ func CDFToHEPalette(cdf IntensityCountSlice) (palette color.Palette) {
 func ToImage(census *LocationCensus, palette color.Palette) image.Image {
 	img := image.NewNRGBA(image.Rect(0, 0, census.Width, census.Height))
 	for row, rowSlice := range census.Data {
-		for col, count := range rowSlice {	
+		for col, count := range rowSlice {
 			c := palette[count]
-			img.Set(col, census.Width - row, c)
+			img.Set(col, census.Width-row, c)
 		}
 	}
 	return img
@@ -187,8 +187,8 @@ func LogHistogramAndCDF(histogram, cdf IntensityCountSlice) {
 		}
 		count := float64(histogram[ndx].Count)
 		cum := float64(cdf[ndx].Count)
-		log.Printf("%5d%9d%7d %9.5f%%   %9.5f%%", ndx, intensity, histogram[ndx].Count, 
-				count / lastCum * 100, cum / lastCum * 100)
+		log.Printf("%5d%9d%7d %9.5f%%   %9.5f%%", ndx, intensity, histogram[ndx].Count,
+			count/lastCum*100, cum/lastCum*100)
 	}
 }
 
@@ -256,12 +256,12 @@ var (
 		"locations", "",
 		"Path (glob) of locations csv file(s) to process")
 
-//	routeTagFlag = flag.String(
-//		"route", "",
-//		"Path (glob) of locations csv file(s) to process")
-//	directionFlag = flag.String(
-//		"locations", "",
-//		"Path (glob) of locations csv file(s) to process")
+	//	routeTagFlag = flag.String(
+	//		"route", "",
+	//		"Path (glob) of locations csv file(s) to process")
+	//	directionFlag = flag.String(
+	//		"locations", "",
+	//		"Path (glob) of locations csv file(s) to process")
 
 	outputImgFlag = flag.String(
 		"output", "",
@@ -337,8 +337,8 @@ func main() {
 	}
 
 	log.Printf("NumNonZero: %d (%.2f %%)",
-			census.NumNonZero,
-			float64(census.NumNonZero) / float64(census.TotalSlots()))
+		census.NumNonZero,
+		float64(census.NumNonZero)/float64(census.TotalSlots()))
 	log.Printf("MaxVal: %d", census.MaxVal)
 
 	histogram, cdf := census.HistogramAndCDF()
@@ -351,12 +351,12 @@ func main() {
 
 	palette := CDFToHEPalette(cdf)
 	img := ToImage(census, palette)
-	
+
 	f, err := os.Create(*outputImgFlag)
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	err = png.Encode(f, img)
 	if err != nil {
 		log.Fatal(err)

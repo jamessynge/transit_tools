@@ -1,10 +1,10 @@
 package nbgeo
 
 import (
-	//	"fmt"
+	"github.com/golang/glog"
+
 	"github.com/jamessynge/transit_tools/geo"
 	"github.com/jamessynge/transit_tools/geom"
-	"log"
 	"github.com/jamessynge/transit_tools/nextbus"
 )
 
@@ -32,13 +32,13 @@ func AddPathToQuadTreeAsSegs(path *nextbus.Path, qt geom.QuadTree) {
 func NewQuadTreeWithAgencyPaths(agency *nextbus.Agency) geom.QuadTree {
 	min, max, ok := agency.GetPathBounds()
 	if !ok {
-		log.Fatal("Failed to find bounds for paths!")
+		glog.Fatal("Failed to find bounds for paths!")
 	}
 	qt := geom.NewQuadTree(
 		geom.NewRect(
 			float64(min.Lon), float64(max.Lon),
 			float64(min.Lat), float64(max.Lat)))
-	log.Printf("Created quadtree with bounds: %v", qt.Bounds())
+	glog.Infof("Created quadtree with bounds: %v", qt.Bounds())
 	for _, path := range agency.PathsByIndex {
 		AddPathToQuadTreeAsSegs(path, qt)
 	}
@@ -54,7 +54,6 @@ func NewQuadTreeWithPaths(paths []*nextbus.Path) geom.QuadTree {
 		geom.NewRect(
 			float64(min.Lon), float64(max.Lon),
 			float64(min.Lat), float64(max.Lat)))
-	log.Printf("Created quadtree with bounds: %v", qt.Bounds())
 	for _, path := range paths {
 		AddPathToQuadTreeAsSegs(path, qt)
 	}
@@ -84,6 +83,7 @@ type visitPathLLSeg struct {
 	//	latlon geo.Location
 	//	point geom.Point
 	paths []*nextbus.Path
+	v1    glog.Verbose
 }
 
 /* TODO Update for new QuadTreeVisitor interface definition
@@ -109,18 +109,26 @@ func (p *visitPathLLSeg) Visit(datum IntersectBounder) {
 }
 */
 func (p *visitPathLLSeg) Visit(datum geom.IntersectBounder) {
-	panic("Not Yet Implemented")
+	ps, ok := datum.(*PathLLSeg)
+	if !ok {
+		glog.Fatalf("Wrong datum type: %T\nValue: %#v", datum, datum)
+	}
+	p.paths = append(p.paths, ps.path)
+	if p.v1 {
+		glog.Infof("%d: found path index %d in search region", len(p.paths), ps.path.Index)
+	}
 }
 
 func NearbyPaths(qt geom.QuadTree, loc geo.Location, dx, dy float64) []*nextbus.Path {
 	if qt == nil {
 		return nil
 	}
+	v1 := glog.V(1)
 	point := LLToPoint(&loc)
 	rect := point.ToRect(dx, dy)
-	//	log.Printf("Searching for paths in: %v", rect)
-	visitor := visitPathLLSeg{}
+	v1.Infof("Searching for paths in: %v", rect)
+	visitor := visitPathLLSeg{v1: v1}
 	qt.Visit(rect, &visitor)
-	//	log.Printf("Found %d paths near location: %v", len(visitor.paths), loc)
+	v1.Infof("Found %d paths near location: %v", len(visitor.paths), loc)
 	return visitor.paths
 }

@@ -2,8 +2,8 @@ package busgeom
 
 import (
 	//	"flag"
-	"log"
 	"github.com/jamessynge/transit_tools/nextbus"
+	"log"
 	//	"path/filepath"
 	"github.com/jamessynge/transit_tools/geo/geogeom"
 	"github.com/jamessynge/transit_tools/geom"
@@ -241,4 +241,23 @@ func DetermineTrustworthyDirTags(
 		}
 	}
 	return
+}
+
+// MUST have at least one report.
+func ReportsBounds(reports []*Report) geom.Rect {
+	minX, minY := reports[0].X, reports[0].Y
+	maxX, maxY := minX, minY
+	for _, report := range reports {
+		if minX > report.X {
+			minX = report.X
+		} else if maxX < report.X {
+			maxX = report.X
+		}
+		if minY > report.Y {
+			minY = report.Y
+		} else if maxY < report.Y {
+			maxY = report.Y
+		}
+	}
+	return geom.NewRect(minX, maxX, minY, maxY)
 }

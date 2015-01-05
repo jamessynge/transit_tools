@@ -3,7 +3,14 @@ package util
 import (
 	"encoding/csv"
 	"io"
+
+	"github.com/golang/glog"
 )
+
+type CsvReader interface {
+	Read() (record []string, err error)
+	ReadAll() (records [][]string, err error)
+}
 
 type CsvReaderCloser struct {
 	src io.Closer
@@ -38,33 +45,65 @@ func OpenReadCsvFile(filePath string) (crc *CsvReaderCloser, err error) {
 	return NewCsvReaderCloser(rc), nil
 }
 
-func ReadCsvFileToChan(filePath string, ch chan<- []string) (
-	numRecords int, err error) {
-	crc, err := OpenReadCsvFile(filePath)
-	if err != nil {
-		return
-	}
-	defer func() {
-		err2 := crc.Close()
-		if err == nil {
-			err = err2
-		}
-	}()
+// Process 1 record (or the error encountered when reading a record,
+// including eof).
+type RecordProcessorFn func(source string, record []string,
+                            recordNum int, err error) error
 
+// If fn returns non-nil, ReadCsvToFn stops reading and returns that
+// error (except for io.EOF, which is converted to nil before returning).
+func ReadCsvToFn(r CsvReader, source string, fn RecordProcessorFn) (
+	numRecords int, err error) {
 	var record []string
 	for {
-		record, err = crc.Read()
+		record, err = r.Read()
+		if err == io.EOF {
+			err = nil
+			return
+		}
+		if err != nil {
+			glog.Warningf("Error reading record %d from %s\nError: %s",
+										numRecords + 1, source, err)
+		}
+		err = fn(source, record, numRecords, err)
 		if err != nil {
 			if err == io.EOF {
 				err = nil
 			}
 			return
 		}
-		ch <- record
 		numRecords++
-		//		if numRecords >= 1000 {
-		//			log.Printf("ReadCsvFileToChan stopping early for debugging")
-		//			return
-		//		}
 	}
+}
+
+func ReadCsvFileToFn(filePath string, fn RecordProcessorFn) (
+	numRecords int, err error) {
+	crc, err := OpenReadCsvFile(filePath)
+	if err != nil {
+		glog.Warningf("Unable to open %s\nError: %s", filePath, err)
+		return
+	}
+	defer func() {
+		err2 := crc.Close()
+		if err == nil {
+			err = err2
+			if err != nil {
+				glog.Warningf("Error closing %s\nError: %s", filePath, err)
+			}
+		}
+	}()
+	return ReadCsvToFn(crc, filePath, fn)
+}
+
+func ReadCsvFileToChan(filePath string, ch chan<- []string) (
+	numRecords int, err error) {
+	return ReadCsvFileToFn(filePath,
+		func(filePath string, record []string,
+         recordNum int, err error) error {
+      if err != nil {
+      	return err
+      }
+			ch <- record
+			return nil
+    })
 }

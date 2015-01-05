@@ -1,35 +1,35 @@
 package configfetch
 
 import (
-"bytes"
-"fmt"
-"net/http"
-"path/filepath"
-"sort"
-"strings"
-"time"
-"os"
+	"bytes"
+	"fmt"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"time"
 
-"github.com/golang/glog"
+	"github.com/golang/glog"
 
-"github.com/jamessynge/transit_tools/nextbus"
-"github.com/jamessynge/transit_tools/util"
+	"github.com/jamessynge/transit_tools/nextbus"
+	"github.com/jamessynge/transit_tools/util"
 )
 
 func isErrorToSuppress(err error) bool {
 	return strings.Contains(err.Error(),
-													"Comparison method violates its general contract!")
+		"Comparison method violates its general contract!")
 }
 
 type state struct {
 	agency, rootDir string
-	fetcher util.HttpFetcher
-	errs util.Errors
+	fetcher         util.HttpFetcher
+	errs            util.Errors
 	// When done, send collected errors (as a single error) to doneCh
 	doneCh chan error
 	// When received, set stop to true.
 	stopCh chan chan bool
-	stop bool
+	stop   bool
 	// Stop response channel; send true when stopped.
 	stopResponseCh chan bool
 }
@@ -38,13 +38,13 @@ func (p *state) doWait(waitFor time.Duration) {
 	if !p.stop {
 		timer := time.NewTimer(waitFor)
 		select {
-		case rCh := <- p.stopCh:
+		case rCh := <-p.stopCh:
 			p.stop = true
 			p.stopResponseCh = rCh
 			timer.Stop()
 			glog.Infof("Stopping config fetch for agency %q.", p.agency)
 			return
-		case <- timer.C:
+		case <-timer.C:
 			return
 		}
 	}
@@ -53,15 +53,19 @@ func (p *state) doWait(waitFor time.Duration) {
 func (p *state) fetchOnce(url string) (*util.HttpFetchResponse, error) {
 	glog.V(1).Infof("fetchOnce url: %s", url)
 	req, err := http.NewRequest("GET", url, nil)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	return p.fetcher.Do(req)
 }
 
 func (p *state) fetchWithRetries(command, routeTag string) (
-		*util.HttpFetchResponse, *nextbus.BodyElement, error) {
+	*util.HttpFetchResponse, *nextbus.BodyElement, error) {
 	url := fmt.Sprintf("%s?command=%s&a=%s", nextbus.BASE_URL, command, p.agency)
-	if len(routeTag) > 0 { url = fmt.Sprintf("%s&r=%s", url, routeTag) }
-	p.doWait(0)	// Check whether we need to stop.
+	if len(routeTag) > 0 {
+		url = fmt.Sprintf("%s&r=%s", url, routeTag)
+	}
+	p.doWait(0) // Check whether we need to stop.
 	var totalWait time.Duration
 	for n := 1; n < 60 && !p.stop; n += n {
 		resp, err := p.fetchOnce(url)
@@ -71,8 +75,8 @@ func (p *state) fetchWithRetries(command, routeTag string) (
 			if bodyElem, err = nextbus.UnmarshalNextbusXml(resp.Body); err == nil {
 				if len(bodyElem.Routes) == 0 && bodyElem.Error != nil {
 					err = fmt.Errorf("Error from Nextbus (shouldRetry=%t): %s\n",
-													 bodyElem.Error.ShouldRetry,
-													 bodyElem.Error.ElementText)
+						bodyElem.Error.ShouldRetry,
+						bodyElem.Error.ElementText)
 					if isErrorToSuppress(err) {
 						return resp, bodyElem, err
 					}
@@ -94,12 +98,12 @@ func (p *state) fetchWithRetries(command, routeTag string) (
 
 // Creates the directory that contains filepath if it doesn't exist.
 func (p *state) writeFile(command, routeTag, ext string, fileBody [][]byte) (
-		err error) {
+	err error) {
 	var path string
 	if routeTag == "" {
-		path = filepath.Join(p.rootDir, command + ext)
+		path = filepath.Join(p.rootDir, command+ext)
 	} else {
-		path = filepath.Join(p.rootDir, command, routeTag + ext)
+		path = filepath.Join(p.rootDir, command, routeTag+ext)
 	}
 	err = os.MkdirAll(filepath.Dir(path), 0750)
 	if err != nil {
@@ -114,14 +118,14 @@ var standardNextbusHeaders = map[string]string{
 	"Connection":                  "",
 	"Content-Type":                "text/xml",
 	"Keep-Alive":                  "",
-	"Server":   		               "",
+	"Server":                      "",
 	"Vary":                        "Accept-Encoding",
 	"X-Frame-Options":             "SAMEORIGIN",
 }
 
 func isStandardNextbusHeader(key, value string) bool {
 	if v, ok := standardNextbusHeaders[key]; ok {
-		return v == "" || v == value 
+		return v == "" || v == value
 	}
 	return false
 }
@@ -150,7 +154,7 @@ func (p *state) saveXml(command, routeTag string, resp *util.HttpFetchResponse) 
 }
 
 func (p *state) fetchAndSave(command, routeTag string) (
-		*util.HttpFetchResponse, *nextbus.BodyElement, bool) {
+	*util.HttpFetchResponse, *nextbus.BodyElement, bool) {
 	hfr, bodyElem, err := p.fetchWithRetries(command, routeTag)
 	if err != nil {
 		if !isErrorToSuppress(err) {
@@ -163,9 +167,9 @@ func (p *state) fetchAndSave(command, routeTag string) (
 	}
 	if hfr.Response.StatusCode != http.StatusOK {
 		p.errs.AddError(
-				fmt.Errorf("Expected status %d, not %d",
-									 hfr.Response.StatusCode,
-									 http.StatusOK))
+			fmt.Errorf("Expected status %d, not %d",
+				hfr.Response.StatusCode,
+				http.StatusOK))
 		return nil, nil, false
 	}
 	p.errs.AddError(p.saveXml(command, routeTag, hfr))
@@ -210,7 +214,9 @@ func (p *state) fetchAll() {
 
 	// For each routeTag:
 	for _, routeTag := range routeTags {
-		if p.stop { break }
+		if p.stop {
+			break
+		}
 		p.fetchRoute(routeTag)
 	}
 
@@ -223,7 +229,7 @@ func (p *state) fetchAll() {
 	} else {
 		// Else let the originator know that we're done.
 		glog.Infoln("Finished config fetch for", len(routeTags),
-								"routes of", p.agency, "in", time.Since(startTime))
+			"routes of", p.agency, "in", time.Since(startTime))
 		if p.doneCh != nil {
 			err := p.errs.ToError()
 			p.doneCh <- err
@@ -232,15 +238,15 @@ func (p *state) fetchAll() {
 }
 
 func StartAgencyConfigFetcher(
-		agency, rootDir string, fetcher util.HttpFetcher) (
-		doneCh chan error, stopCh chan chan bool) {
+	agency, rootDir string, fetcher util.HttpFetcher) (
+	doneCh chan error, stopCh chan chan bool) {
 	p := &state{
-		agency: agency,
+		agency:  agency,
 		rootDir: rootDir,
 		fetcher: fetcher,
-		errs: util.NewErrors(),
-		stopCh: make(chan chan bool, 1),
-		doneCh: make(chan error, 1),
+		errs:    util.NewErrors(),
+		stopCh:  make(chan chan bool, 1),
+		doneCh:  make(chan error, 1),
 	}
 
 	go p.fetchAll()
@@ -252,12 +258,12 @@ func StartAgencyConfigFetcher(
 // Assumes rootDir contains any identifying information needed to distinguish
 // multiple calls to this function, such as date, time or agency.
 func FetchAgencyConfig(agency, rootDir string,
-											 fetcher util.HttpFetcher) error {
+	fetcher util.HttpFetcher) error {
 	p := &state{
-		agency: agency,
+		agency:  agency,
 		rootDir: rootDir,
 		fetcher: fetcher,
-		errs: util.NewErrors(),
+		errs:    util.NewErrors(),
 	}
 
 	p.fetchAll()
@@ -265,7 +271,7 @@ func FetchAgencyConfig(agency, rootDir string,
 }
 
 func PeriodicConfigFetcher(agency, rootDir string, fetcher util.HttpFetcher,
-													 fetchHours []int, stopPCFCh chan chan bool) {
+	fetchHours []int, stopPCFCh chan chan bool) {
 	layout := filepath.Join("2006", "01", "02", "2006-01-02_1504")
 	if len(fetchHours) == 0 {
 		fetchHours = []int{5}
@@ -277,7 +283,7 @@ func PeriodicConfigFetcher(agency, rootDir string, fetcher util.HttpFetcher,
 			}
 		}
 		checkHour(fetchHours[0])
-		checkHour(fetchHours[len(fetchHours) - 1])
+		checkHour(fetchHours[len(fetchHours)-1])
 	}
 	glog.Infoln("Config data fetch hours:", fetchHours)
 
@@ -298,7 +304,7 @@ func PeriodicConfigFetcher(agency, rootDir string, fetcher util.HttpFetcher,
 		var configFetchStoppedCh chan bool
 		for {
 			select {
-			case err := <- configFetchDoneCh:
+			case err := <-configFetchDoneCh:
 				// Normal case: config fetch finished and reported its status.
 				if err != nil {
 					glog.Warning("Error fetching config for '", agency, "': ", err)
@@ -307,12 +313,12 @@ func PeriodicConfigFetcher(agency, rootDir string, fetcher util.HttpFetcher,
 				}
 				configCuller.AddDir(currentDir)
 				return
-			case stoppedPCFCh = <- stopPCFCh:
+			case stoppedPCFCh = <-stopPCFCh:
 				glog.Info("Stopping in-progress fetch of config for '", agency, "'")
 				configFetchStoppedCh = make(chan bool)
 				stopConfigFetchCh <- configFetchStoppedCh
 				stopPCFCh = nil
-			case <- configFetchStoppedCh:
+			case <-configFetchStoppedCh:
 				glog.Info("Stopped fetching config for '", agency, "'")
 				return
 			}
@@ -335,22 +341,24 @@ func PeriodicConfigFetcher(agency, rootDir string, fetcher util.HttpFetcher,
 			// concurrent vehicle location fetching.
 			waitFor := targetTime.Sub(now)
 			glog.V(1).Infoln("now:", now, "   targetTime:", targetTime)
-			if waitFor <= 0 { continue }
+			if waitFor <= 0 {
+				continue
+			}
 			// Wait until target time is reached.
 			// Not sure how this would handle daylight saving changes, where we
 			// either have two instances of 1am we fall back, or no instance of
 			// 2am when we spring forward.
 			glog.Infoln("Waiting", waitFor, "until",
-					util.PrettyFutureTime(now, targetTime), "for next config fetch.")
+				util.PrettyFutureTime(now, targetTime), "for next config fetch.")
 			t := time.NewTimer(waitFor)
 			select {
-			case <- t.C:
+			case <-t.C:
 				// Done waiting, do another fetch.
 				fetchOnce()
 				if stoppedPCFCh != nil {
 					return
 				}
-			case stoppedPCFCh = <- stopPCFCh:
+			case stoppedPCFCh = <-stopPCFCh:
 				glog.Info("PeriodicConfigFetcher for '", agency, "' stopping")
 				stopPCFCh = nil
 				return
@@ -371,7 +379,7 @@ func PeriodicConfigFetcher(agency, rootDir string, fetcher util.HttpFetcher,
 			if stoppedPCFCh != nil {
 				break
 			}
-			day = util.MidnightOfNextDay(fetchTimes[len(fetchTimes) - 1])
+			day = util.MidnightOfNextDay(fetchTimes[len(fetchTimes)-1])
 		}
 	}
 

@@ -1,12 +1,12 @@
 package nblocations
 
 import (
-"flag"
-"github.com/golang/glog"
-"os"
-"path/filepath"
-"time"
-"github.com/jamessynge/transit_tools/util"
+	"flag"
+	"github.com/golang/glog"
+	"github.com/jamessynge/transit_tools/util"
+	"os"
+	"path/filepath"
+	"time"
 )
 
 // DEBUG flags:
@@ -19,17 +19,21 @@ var debugArchivingFlag = flag.Bool(
 // aggregator (latest location of all vehicles); stats on frequency; which
 // files are being written to currently; etc.
 
+// TODO Complete monitor_server_time_offset, for learning how trustworthy the
+// "Date" header is, and ultimately how it relates to, and affects, the
+// secsSinceReport attribute of vehicle elements in location reports.
+
 // Start the process of fetching vehicle location reports, archiving
 // the raw reports and aggregating them also into CSV files.
 // Stops when it receives a |chan bool| on stopFetchAndArchiveCh; after
 // stopping it sends true back on the channel it received.
 func StartFetchAndArchive(
-		agency string,
-		interval time.Duration,
-		extraSecs uint,
-		fetcher util.HttpFetcher,
-		agencyRootDir string,
-		stopFetchAndArchiveCh chan chan bool) {
+	agency string,
+	interval time.Duration,
+	extraSecs uint,
+	fetcher util.HttpFetcher,
+	agencyRootDir string,
+	stopFetchAndArchiveCh chan chan bool) {
 	// Root directory for saved vehicleLocations responses: compressed tar file
 	// of xml responses (almost raw: we add a comment with metadata about the
 	// request and response; and for failures, we store files of other types).
@@ -50,20 +54,20 @@ func StartFetchAndArchive(
 		glog.V(1).Infof("Created directory %s", processedRootDir)
 	}
 	state := &locationFetchAndArchiveState{
-		agency: agency,
-		agencyRootDir: agencyRootDir,
-		rawRootDir: rawRootDir,
-		processedRootDir: processedRootDir,
-		interval: interval,
-		extraSecs: extraSecs,
-		fetcher: fetcher,
-		vlrArchiverInputCh: make(chan *VehicleLocationsResponse, 10),
-		vlrArchiverStopCh: make(chan chan bool),
-		csvArchiverInputCh: make(chan *VehicleLocationsResponse, 10),
-		csvArchiverStopCh: make(chan chan bool),
-		splitterInputCh: make(chan *VehicleLocationsResponse, 10),
+		agency:                agency,
+		agencyRootDir:         agencyRootDir,
+		rawRootDir:            rawRootDir,
+		processedRootDir:      processedRootDir,
+		interval:              interval,
+		extraSecs:             extraSecs,
+		fetcher:               fetcher,
+		vlrArchiverInputCh:    make(chan *VehicleLocationsResponse, 10),
+		vlrArchiverStopCh:     make(chan chan bool),
+		csvArchiverInputCh:    make(chan *VehicleLocationsResponse, 10),
+		csvArchiverStopCh:     make(chan chan bool),
+		splitterInputCh:       make(chan *VehicleLocationsResponse, 10),
 		periodicFetcherStopCh: make(chan chan bool),
-		primaryStopCh: stopFetchAndArchiveCh,
+		primaryStopCh:         stopFetchAndArchiveCh,
 	}
 
 	go state.RunVLRArchiver()
@@ -71,7 +75,7 @@ func StartFetchAndArchive(
 	go state.RunSplitter()
 
 	go PeriodicFetcher(agency, interval, extraSecs, fetcher,
-	                   state.periodicFetcherStopCh, state.splitterInputCh)
+		state.periodicFetcherStopCh, state.splitterInputCh)
 
 	go state.RunCleaner()
 
@@ -91,14 +95,14 @@ func (p *locationFetchAndArchiveState) RunVLRArchiver() {
 	errorCount := 0
 	for {
 		select {
-		case stoppedCh := <- p.vlrArchiverStopCh:
+		case stoppedCh := <-p.vlrArchiverStopCh:
 			glog.Info("Closing VLRArchiver...")
 			if err := archiver.Close(); err != nil {
 				glog.Errorln("Error during closing VLRArchiver:", err)
 			}
 			stoppedCh <- true
 			return
-		case vlr, ok := <- p.vlrArchiverInputCh:
+		case vlr, ok := <-p.vlrArchiverInputCh:
 			if !ok {
 				p.vlrArchiverInputCh = nil
 				continue
@@ -108,7 +112,7 @@ func (p *locationFetchAndArchiveState) RunVLRArchiver() {
 				errorCount++
 				if errorCount > 10 {
 					glog.Fatalf("Too many sequential errors (%d) archiving responses",
-											errorCount)
+						errorCount)
 				}
 			} else {
 				errorCount = 0
@@ -118,26 +122,26 @@ func (p *locationFetchAndArchiveState) RunVLRArchiver() {
 }
 
 type locationFetchAndArchiveState struct {
-	agency string
-	agencyRootDir string
-	rawRootDir string
+	agency           string
+	agencyRootDir    string
+	rawRootDir       string
 	processedRootDir string
 
-	interval time.Duration
+	interval  time.Duration
 	extraSecs uint
-	fetcher util.HttpFetcher
+	fetcher   util.HttpFetcher
 
-//	vlrArchiver *VLRArchiver
+	//	vlrArchiver *VLRArchiver
 	vlrArchiverInputCh chan *VehicleLocationsResponse
-	vlrArchiverStopCh chan chan bool
-//	csvArchiver *VLRArchiver
+	vlrArchiverStopCh  chan chan bool
+	//	csvArchiver *VLRArchiver
 	csvArchiverInputCh chan *VehicleLocationsResponse
-	csvArchiverStopCh chan chan bool
+	csvArchiverStopCh  chan chan bool
 
 	// Periodic fetcher's input is a timer, and its output goes to the splitter.
 	// When we stop the periodic fetcher, it will close the splitterInputCh,
 	// which will propagate to the other input channels.
-	splitterInputCh chan *VehicleLocationsResponse
+	splitterInputCh       chan *VehicleLocationsResponse
 	periodicFetcherStopCh chan chan bool
 
 	primaryStopCh chan chan bool
@@ -175,16 +179,16 @@ func (p *locationFetchAndArchiveState) RunAggegator() {
 
 	for {
 		select {
-		case stoppedCh := <- p.csvArchiverStopCh:
+		case stoppedCh := <-p.csvArchiverStopCh:
 			glog.Info("CSV Archiver closing")
 			if aggregator != nil {
 				doClose()
 			}
 			stoppedCh <- true
 			return
-		case <- ticker.C:
+		case <-ticker.C:
 			archiver.PartialFlush()
-		case vlr, ok := <- p.csvArchiverInputCh:
+		case vlr, ok := <-p.csvArchiverInputCh:
 			if !ok {
 				doClose()
 				continue
@@ -193,7 +197,7 @@ func (p *locationFetchAndArchiveState) RunAggegator() {
 				continue
 			}
 			glog.V(1).Infof("Found %d vehicle updates",
-											len(vlr.Report.VehicleLocations))
+				len(vlr.Report.VehicleLocations))
 			aggregator.Insert(vlr.Report.VehicleLocations)
 			locations := aggregator.RemoveStaleReports()
 			if err := archiver.WriteLocations(locations); err != nil {
@@ -210,7 +214,7 @@ func (p *locationFetchAndArchiveState) RunSplitter() {
 		p.vlrArchiverInputCh,
 	}
 	for {
-		if vlr, ok := <- p.splitterInputCh; !ok {
+		if vlr, ok := <-p.splitterInputCh; !ok {
 			// Unable to read. Close the channels so the receivers
 			// find out there is no more data coming.
 			for _, ch := range writeTo {
@@ -233,16 +237,16 @@ func (p *locationFetchAndArchiveState) RunCleaner() {
 		ch <- stoppedCh
 		t := time.NewTimer(timeout)
 		select {
-		case <- stoppedCh:
+		case <-stoppedCh:
 			t.Stop()
 			glog.Infoln("Stopped", name)
-		case <- t.C:
+		case <-t.C:
 			glog.Warningln(name, "did not respond within", timeout)
 		}
 	}
 
 	waitForEmpty := func(name string, inputCh chan *VehicleLocationsResponse,
-	                     timeout time.Duration) {
+		timeout time.Duration) {
 		start := len(inputCh)
 		if start > 0 {
 			glog.Infoln("Waiting until", name, "has received the", start, "pending input(s).")
@@ -251,7 +255,7 @@ func (p *locationFetchAndArchiveState) RunCleaner() {
 			for {
 				num := 0
 				select {
-				case <- t.C:
+				case <-t.C:
 					num = len(inputCh)
 					if num == 1 {
 						glog.Warningln("1 input remains for", name, "after waiting", timeout)
@@ -260,7 +264,7 @@ func (p *locationFetchAndArchiveState) RunCleaner() {
 						glog.Warningln(num, "inputs remain for", name, "after waiting", timeout)
 						return
 					}
-				case <- ticker.C:
+				case <-ticker.C:
 					num = len(inputCh)
 				}
 				if num <= 0 {
@@ -272,19 +276,19 @@ func (p *locationFetchAndArchiveState) RunCleaner() {
 	}
 
 	// Wait until requested to cleanup.
-	stoppedCh := <- p.primaryStopCh
+	stoppedCh := <-p.primaryStopCh
 
 	// Tell the periodic fetcher to stop fetching; it will close its output
 	// channel, which will propagate to the splitter's output channels once it
 	// has drained its input channel.
-	stopOne("Periodic Fetcher", p.periodicFetcherStopCh, 20 * time.Second)
-	waitForEmpty("VLR Splitter", p.splitterInputCh, 20 * time.Second)
+	stopOne("Periodic Fetcher", p.periodicFetcherStopCh, 20*time.Second)
+	waitForEmpty("VLR Splitter", p.splitterInputCh, 20*time.Second)
 
-	waitForEmpty("VLR Archiver", p.vlrArchiverInputCh, 20 * time.Second)
-	stopOne("VLR Archiver", p.vlrArchiverStopCh, 20 * time.Second)
+	waitForEmpty("VLR Archiver", p.vlrArchiverInputCh, 20*time.Second)
+	stopOne("VLR Archiver", p.vlrArchiverStopCh, 20*time.Second)
 
-	waitForEmpty("CSV Archiver", p.csvArchiverInputCh, 20 * time.Second)
-	stopOne("CSV Archiver", p.csvArchiverStopCh, 20 * time.Second)
+	waitForEmpty("CSV Archiver", p.csvArchiverInputCh, 20*time.Second)
+	stopOne("CSV Archiver", p.csvArchiverStopCh, 20*time.Second)
 
 	// All done.
 	stoppedCh <- true

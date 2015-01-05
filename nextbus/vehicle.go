@@ -3,10 +3,10 @@ package nextbus
 import (
 	"fmt"
 	"github.com/jamessynge/transit_tools/geo"
+	"github.com/jamessynge/transit_tools/util"
 	"sort"
 	"strconv"
 	"time"
-	"github.com/jamessynge/transit_tools/util"
 )
 
 type VehicleLocation struct {
@@ -96,49 +96,46 @@ var (
 	MILLIS_LIMIT                     = uint64(ONE_YEAR_PLUS_PROGRAM_START_TIME.Unix() * 1000)
 )
 
-func CSVFieldsToVehicleLocation(fields []string) (*VehicleLocation, error) {
+func CSVFieldsIntoVehicleLocation(
+			fields []string, loc *VehicleLocation) error {
 	if len(fields) != 8 {
-		return nil, fmt.Errorf("Expected 8 fields, not %d", len(fields))
+		return fmt.Errorf("Expected 8 fields, not %d", len(fields))
 	}
 
 	millis, err := strconv.ParseUint(fields[0], 10, 64)
 	if err != nil {
-		return nil, err
+		return err
 	} else if millis < Jan_1_2000_UTC {
-		return nil, fmt.Errorf("Timestamp too low: %v", millis)
+		return fmt.Errorf("Timestamp too low: %v", millis)
 	} else if MILLIS_LIMIT < millis {
-		return nil, fmt.Errorf("Timestamp too high: %v", millis)
+		return fmt.Errorf("Timestamp too high: %v", millis)
 	}
-	event_time := time.Unix(int64(millis/1000), int64((millis%1000)*1000000))
-
-	vehicleId := fields[2]
-	routeTag := fields[3]
-	dirTag := fields[4]
+	loc.Time = time.Unix(int64(millis/1000), int64((millis%1000)*1000000))
+	loc.VehicleId = fields[2]
+	loc.RouteTag = fields[3]
+	loc.DirTag = fields[4]
 
 	// Ignoring error from parsing heading (very
 	// occasionally have negative values).
-	heading, _ := geo.ParseHeading(fields[5])
+	loc.Heading, _ = geo.ParseHeading(fields[5])
 
 	lat, err := geo.ParseLatitude(fields[6])
 	if err != nil {
-		return nil, err
+		return err
 	}
-
 	lon, err := geo.ParseLongitude(fields[7])
 	if err != nil {
-		return nil, err
-	}
-
-	loc := &VehicleLocation{
-		VehicleId: vehicleId,
-		RouteTag:  routeTag,
-		DirTag:    dirTag,
-		Time:      event_time,
-		Heading:   heading,
+		return err
 	}
 	loc.Location = geo.Location{Lat: lat, Lon: lon}
 
-	return loc, nil
+	return nil
+}
+
+func CSVFieldsToVehicleLocation(fields []string) (*VehicleLocation, error) {
+	loc := new(VehicleLocation)
+	err := CSVFieldsIntoVehicleLocation(fields, loc)
+	return loc, err
 }
 
 func ConvertVehicleElementToVehicleLocation(

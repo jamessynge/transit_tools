@@ -1,7 +1,7 @@
 package util
 
 import (
-//	"github.com/golang/glog"
+	//	"github.com/golang/glog"
 	"net/http"
 	"time"
 )
@@ -19,13 +19,13 @@ type HttpRegulatedFetcher interface {
 }
 
 type simpleHttpRegulatedFetcher struct {
-	client *http.Client
+	client    *http.Client
 	regulator RateRegulator
-	doWait	 bool
+	doWait    bool
 }
 
 func (p *simpleHttpRegulatedFetcher) HttpRegulatedFetch(
-		request *http.Request) *HttpRegulatedFetchResponse {
+	request *http.Request) *HttpRegulatedFetchResponse {
 	hfr := DoHttpRequest(p.client, request)
 	duration := hfr.CloseTime.Sub(hfr.StartTime)
 	resp := &HttpRegulatedFetchResponse{HttpFetchResponse: *hfr}
@@ -47,7 +47,7 @@ func NewHttpRegulatedFetcher(
 		client = http.DefaultClient
 	}
 	state := &simpleHttpRegulatedFetcher{
-		client: client,
+		client:    client,
 		regulator: regulator,
 		doWait:    doWait,
 	}

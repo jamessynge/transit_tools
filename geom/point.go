@@ -1,7 +1,9 @@
 package geom
 
 import (
+	"log"
 	"math"
+	"reflect"
 )
 
 type Point struct {
@@ -60,6 +62,109 @@ func (p Point) Normalize() Point {
 	return p.Scale(1 / l)
 }
 */
+
+var _typeof_Point = reflect.TypeOf((*Point)(nil)).Elem() 
+
+
+
+
+
+func VisitPoints(points interface{}, fn func(pt Point)) {
+//Leave out optimization while debugging lower cases.
+//	if s, ok := points.([]Point); ok {
+//		for _, pt := range s {
+//			fn(pt)
+//		}
+//		return
+//	}
+
+	t := reflect.TypeOf(points)
+	if !(t.Kind() == reflect.Array || t.Kind() == reflect.Slice) {
+		log.Fatal("Not an array or slice: ", t.String())
+	}
+	pv := reflect.ValueOf(points)
+	l := pv.Len()
+
+	et := t.Elem()
+	if et.ConvertibleTo(_typeof_Point) {
+		// Points is a slice of objects convertable to Point.
+		for n := 0; n < l; n++ {
+			ev := pv.Index(n)
+			fn(ev.Interface().(Point))
+		}
+		return
+	}
+	if et.Kind() != reflect.Ptr {
+		if et.Kind() != reflect.Struct {
+			log.Fatal("Unable to convert to a geom.Point: ", et.String())
+		}
+		sf, ok := et.FieldByName("Point")
+		if ok && !(sf.Anonymous && sf.Type == _typeof_Point) {
+			log.Fatal("Point field (%v) is not embedded in ", sf, et.String())
+		} else if !ok {
+			log.Fatal("Not a pointer, nor struct with embedded Point: ", et.String())
+		}
+		// Points is a slice of objects embedding Point.
+		for n := 0; n < l; n++ {
+			ev := pv.Index(n)
+			fv := ev.FieldByName("Point")
+			fn(fv.Interface().(Point))
+		}
+		return
+	}
+	et = et.Elem()
+	if et.ConvertibleTo(_typeof_Point) {
+		// Points is a slice of pointers to objects convertable to Pointer.
+		for n := 0; n < l; n++ {
+			ev := pv.Index(n)
+			if ev.IsNil() { continue }
+			ev = reflect.Indirect(ev)
+			fn(ev.Interface().(Point))
+		}
+	}
+
+	// Is it an embedded struct field?
+	if et.Kind() != reflect.Struct {
+		log.Fatalf("Unable to convert to a Point: %f, in %s", et, t)
+	}
+	sf, ok := et.FieldByName("Point")
+	if ok && !(sf.Anonymous && sf.Type == _typeof_Point) {
+		log.Fatalf("Point field (%v) is not embedded in %s, in %s", sf, et, t)
+	} else if !ok {
+		log.Fatalf("No field Point in %s, in %s", et, t)
+	}
+	for n := 0; n < l; n++ {
+		ev := pv.Index(n)
+		if ev.IsNil() { continue }
+		ev = reflect.Indirect(ev)
+		fv := ev.FieldByName("Point")
+		fn(fv.Interface().(Point))
+	}
+	return
+}
+
+func PointsBounds(points interface{}) (bounds Rect) {
+	first := true
+	VisitPoints(points, func(pt Point) {
+		if first {
+			first = false
+			bounds.MinX, bounds.MinY = pt.X, pt.Y
+			bounds.MaxX, bounds.MaxY = pt.X, pt.Y
+			return
+		}
+		if pt.X < bounds.MinX {
+			bounds.MinX = pt.X
+		} else if pt.X > bounds.MaxX {
+			bounds.MaxX = pt.X
+		}
+		if pt.Y < bounds.MinY {
+			bounds.MinY = pt.Y
+		} else if pt.Y > bounds.MaxY {
+			bounds.MaxY = pt.Y
+		}
+	})
+	return
+}
 
 // Implements stats.Data2DSource with weight == 1 always
 type PointSlice []Point

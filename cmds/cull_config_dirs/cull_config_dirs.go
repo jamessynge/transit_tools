@@ -1,34 +1,44 @@
-package main 
+package main
+
+// TODO Use configfetch.NewConfigCuller instead of reimplementing it here
+// (well, this was the original implementation, but NewConfigCuller was based
+// on this one).
+
+// TODO Accomodate configfetch failures by detecting when the differences
+// between two config dirs is due to a failure (e.g. one only collected a
+// small subset of the files, or one is a superset of the other, i.e. the
+// list of all routes is the same, but more routes/schedules were fetched by
+// one than by the other).
 
 import (
 	"flag"
-"path/filepath"
-"strings"
-"os"
-"time"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
-"github.com/golang/glog"
+	"github.com/golang/glog"
 
 	"github.com/jamessynge/transit_tools/nextbus/configfetch"
 
-"github.com/jamessynge/transit_tools/util"
+	"github.com/jamessynge/transit_tools/util"
 )
 
 var execFlag = flag.Bool(
 	"exec", false,
-	"If true, cleans config directories when those on either side in time " +
-	"order are the same; else just logs the info.")
+	"If true, cleans config directories when those on either side in time "+
+		"order are the same; else just logs the info.")
 
 // Find directories under root that contain "routeList.xml".
-func findConfigDirs(root string, timestamps map[string]time.Time) ([]string,  error) {
+func findConfigDirs(root string, timestamps map[string]time.Time) ([]string, error) {
 	dirsToSkip := map[string]bool{
 		"locations": true,
-		"logs": true,
-		"raw": true,
+		"logs":      true,
+		"raw":       true,
 		"processed": true,
 	}
 	errs := util.NewErrors()
-  configDirs := []string{}
+	configDirs := []string{}
 	walkFn := func(fp string, info os.FileInfo, err error) error {
 		if err != nil {
 			errs.AddError(err)
@@ -52,15 +62,15 @@ func findConfigDirs(root string, timestamps map[string]time.Time) ([]string,  er
 		return nil
 	}
 	glog.Infoln("Searching under root", root)
-  err := filepath.Walk(root, walkFn)
-  if err != nil {
-  	return nil, err
-  }
-  return configDirs, errs.ToError()
+	err := filepath.Walk(root, walkFn)
+	if err != nil {
+		return nil, err
+	}
+	return configDirs, errs.ToError()
 }
 
 func findAllConfigDirs(
-		dirs []string, timestamps map[string]time.Time) ([]string,  error) {
+	dirs []string, timestamps map[string]time.Time) ([]string, error) {
 	var allConfigDirs []string
 	for _, root := range dirs {
 		matches, err := filepath.Glob(root)
@@ -70,7 +80,7 @@ func findAllConfigDirs(
 		}
 		var configDirs []string
 		if len(matches) != 1 || matches[0] != root {
-			glog.Infoln("Expanded glob", root, "to", len(matches),"matches")
+			glog.Infoln("Expanded glob", root, "to", len(matches), "matches")
 			configDirs, err = findAllConfigDirs(matches, timestamps)
 			glog.Infoln("Finished with glob", root)
 		} else {
@@ -85,6 +95,7 @@ func findAllConfigDirs(
 	return allConfigDirs, nil
 }
 
+/*
 func CompareConfigDirs(dir1, dir2 string) bool {
 	glog.Infoln("Comparing:", dir1)
 	glog.Infoln("  Against:", dir2)
@@ -99,7 +110,7 @@ func CompareConfigDirs(dir1, dir2 string) bool {
 	}
 	return false
 }
-
+*/
 func main() {
 	flag.Parse()
 	timestamps := make(map[string]time.Time)
@@ -119,52 +130,28 @@ func main() {
 	}
 	util.Sort3(len(allConfigDirs), less, swap)
 
-	// Want to keep the first and last of the sequence that are identical,
-	// not just the first or last.
-	firstDir := ""
-	prevDir := ""
-	var candidates []string
+	// Send the config dirs to the culler.
+	candidatesCh := make(chan string, len(allConfigDirs))
+	culler := configfetch.NewConfigCuller2(!*execFlag, candidatesCh)
 	for _, currentDir := range allConfigDirs {
-		if prevDir == "" {
-			glog.V(1).Info("prevDir is empty")
-			firstDir = currentDir
-			prevDir = currentDir
-			continue
-		}
-		if !CompareConfigDirs(prevDir, currentDir) {
-			glog.V(1).Info("Resetting firstDir and prevDir to currentDir")
-			firstDir = currentDir
-			prevDir = currentDir
-			continue
-		}
-		if firstDir == prevDir {
-			glog.V(1).Info("firstDir and prevDir are the same, no middle dir yet")
-			prevDir = currentDir
-			continue
-		}
-		// We've got three in a row that are the same.
-		glog.Infof(`Found 3 config dirs in a row that are the same:
- First: %s
-Second: %s
- Third: %s`, firstDir, prevDir, currentDir)
- 		candidates = append(candidates, prevDir)
-		if *execFlag {
-			glog.Infoln("Removing middle dir:", prevDir)
-			err := os.RemoveAll(prevDir)
-			if err != nil {
-				glog.Fatalf("Failed to remove %s\nError: %s", prevDir, err)
-				return
-			}
-		} else {
-			glog.V(1).Infoln("Added to candidates:", prevDir)
-		}
-		prevDir = currentDir
+		culler.AddDir(currentDir)
+	}
+
+	// Wait for the culler to finish (depending here on the fact that the
+	// culler has a zero length channel for receiving dirs).
+	stoppedCh := culler.StopWhenReady()
+	<-stoppedCh
+
+	// Read the list of directories to remove/that were removed.
+	var candidates []string
+	for dir := range candidatesCh {
+		candidates = append(candidates, dir)
 	}
 
 	if *execFlag {
 		glog.Infoln("Removed", len(candidates), "duplicate config dir(s)")
 	} else {
 		glog.Infoln("There are", len(candidates), "directories to remove:\n",
-				strings.Join(candidates, "\n"))
+			strings.Join(candidates, "\n"))
 	}
 }

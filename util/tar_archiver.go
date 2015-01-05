@@ -2,8 +2,8 @@ package util
 
 import (
 	"archive/tar"
-	"github.com/golang/glog"
 	"fmt"
+	"github.com/golang/glog"
 	"path/filepath"
 	"time"
 )
@@ -50,7 +50,7 @@ func (p *DatedTarArchiver) GetPathFragment(timestamp time.Time) string {
 }
 
 func (p *DatedTarArchiver) GetTarWriter(
-		timestamp time.Time) (*TarWriter, error) {
+	timestamp time.Time) (*TarWriter, error) {
 	fragment := p.GetPathFragment(timestamp)
 	errs := NewErrors()
 	if p.currentTar != nil {
@@ -67,11 +67,13 @@ func (p *DatedTarArchiver) GetTarWriter(
 	dir := filepath.Join(p.RootDir, dirFrag)
 
 	file, path, err := OpenUniqueFile(
-			dir, baseFrag, ".tar.gz", 0755, 0644)
+		dir, baseFrag, ".tar.gz", 0755, 0644)
 	if err != nil {
 		errs.AddError(err)
 		return nil, errs.ToError()
 	}
+
+	glog.Info("Created ", path)
 
 	p.currentPath = path
 	p.currentFragment = fragment
@@ -107,7 +109,7 @@ func (p *DatedTarArchiver) Close() error {
 }
 
 func (p *DatedTarArchiver) AddHeaderAndParts(
-		timestamp time.Time, hdr *tar.Header, parts [][]byte) error {
+	timestamp time.Time, hdr *tar.Header, parts [][]byte) error {
 	errs := NewErrors()
 	tw, err := p.GetTarWriter(timestamp)
 	errs.AddError(err)
@@ -130,8 +132,8 @@ func (p *DatedTarArchiver) AddHeaderAndParts(
 }
 
 func (p *DatedTarArchiver) AddFileParts(
-		timestamp time.Time, filename string,
-		parts [][]byte) error {
+	timestamp time.Time, filename string,
+	parts [][]byte) error {
 	var size int64 = 0
 	for _, part := range parts {
 		size += int64(len(part))

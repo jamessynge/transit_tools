@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"github.com/golang/glog"
 	"github.com/jamessynge/transit_tools/nextbus"
+	"github.com/jamessynge/transit_tools/util"
 	"os"
 	"path/filepath"
 	"time"
-	"github.com/jamessynge/transit_tools/util"
 )
 
 type ArchiveSplitPoint interface {
@@ -50,7 +50,7 @@ func (root_dir dailyArchiveSplitterOpener) OpenArchiveFor(t time.Time) (
 		return "", nil, err
 	}
 	csv := util.NewCsvWriteCloser(f, true)
-	glog.Info("Opened for writing: ", path)
+	glog.Info("Created ", path)
 	return path, csv, nil
 }
 
@@ -84,7 +84,7 @@ func (root_dir debugArchiveSplitterOpener) OpenArchiveFor(t time.Time) (
 		return "", nil, err
 	}
 	csv := util.NewCsvWriteCloser(f, true)
-	glog.Infof("Opened for writing %s", path)
+	glog.Infof("Created %s", path)
 	return path, csv, nil
 }
 
@@ -163,6 +163,10 @@ func (p *csvArchiver) Write(location *nextbus.VehicleLocation) error {
 		p.csv = csv
 		p.csv_path = path
 		p.nextArchiveTime = p.splitter.NextArchiveSplitPoint(location.Time)
+		// Add a header identifying the fields.
+		fieldNames := nextbus.VehicleCSVFieldNames()
+		fieldNames[0] = "# " + fieldNames[0]
+		p.csv.Write(fieldNames)
 	}
 	return p.csv.Write(location.ToCSVFields())
 }

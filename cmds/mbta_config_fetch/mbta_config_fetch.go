@@ -1,12 +1,12 @@
-package main 
+package main
 
 import (
-	"github.com/golang/glog"
 	"flag"
-"github.com/jamessynge/transit_tools/util"
-"github.com/jamessynge/transit_tools/nextbus/configfetch"
-"time"
-"net/http"
+	"github.com/golang/glog"
+	"github.com/jamessynge/transit_tools/nextbus/configfetch"
+	"github.com/jamessynge/transit_tools/util"
+	"net/http"
+	"time"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 	// (400KB/20seconds).
 	var capacity uint32 = 400 * 1024
 	duration := time.Duration(20) * time.Second
-	rr, err := util.NewRateRegulator(capacity / 4, capacity, duration)
+	rr, err := util.NewRateRegulator(capacity/4, capacity, duration)
 	if err != nil {
 		glog.Fatal(err)
 	}
@@ -30,4 +30,3 @@ func main() {
 		glog.Fatal(err)
 	}
 }
-

@@ -1,8 +1,6 @@
 package gce
 
-import (
-
-)
+import ()
 
 import (
 	"errors"
@@ -15,14 +13,13 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"golang.org/x/net/context"
 	"github.com/golang/oauth2"
 	"github.com/golang/oauth2/google"
+	"golang.org/x/net/context"
 	"google.golang.org/cloud"
 	"google.golang.org/cloud/compute/metadata"
 	"google.golang.org/cloud/pubsub"
 	"google.golang.org/cloud/storage"
-
 )
 
 // NewClient creates http.Client with a jwt service account when

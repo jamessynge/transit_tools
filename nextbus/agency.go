@@ -14,9 +14,10 @@ type Agency struct {
 	Routes map[string]*Route
 	// Because a vehicleLocation report sometimes erroneously has mismatched
 	// routeTag and dirTag, we have an agency level index of Directions.
-	Directions    map[string]*Direction
-	Stops         map[string]*Stop
-	PathsByHash   map[uint64][]*Path // Map key is a hash, which my have collisions
+	Directions map[string]*Direction
+	Stops      map[string]*Stop
+	// Map key is a hash, which may have collisions.
+	PathsByHash   map[uint64][]*Path
 	PathsByIndex  map[int]*Path
 	lastPathIndex int
 	Locations     map[geo.Location]*Location

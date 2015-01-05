@@ -29,7 +29,8 @@ type Intersecter interface {
 
 // If an object to be inserted into a quadtree is actually inserted as several
 // different objects (e.g. a path composed of segments, inserted as one object
-// per segment), this interface allows
+// per segment), this interface allows those several objects to be recognized
+// as one (i.e. they will all have the same UniqueId).
 type UniqueIder interface {
 	// Returns a value used to determine, during a Visit, whether the object
 	// has already been visited (i.e. an underlying object may be split into

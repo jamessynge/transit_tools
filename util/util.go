@@ -3,10 +3,11 @@ package util
 import (
 	"flag"
 	"fmt"
-	"github.com/golang/glog"
 	"io"
 	"os"
 	"runtime"
+
+	"github.com/golang/glog"
 )
 
 var (

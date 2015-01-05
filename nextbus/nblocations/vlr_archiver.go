@@ -3,9 +3,9 @@ package nblocations
 import (
 	"bytes"
 	"fmt"
+	"github.com/jamessynge/transit_tools/util"
 	"net/http"
 	"strings"
-	"github.com/jamessynge/transit_tools/util"
 )
 
 // Archives the XML responses from NextBus as files in a tar.
@@ -21,7 +21,7 @@ type VLRArchiver struct {
 }
 
 func NewVLRArchiver(dta *util.DatedTarArchiver) *VLRArchiver {
-	return &VLRArchiver{dta:dta, FileNameBaseLayout: "20060102_150405"}
+	return &VLRArchiver{dta: dta, FileNameBaseLayout: "20060102_150405"}
 }
 
 func (p *VLRArchiver) PartialFlush() error {
@@ -46,6 +46,7 @@ var standardComments = map[string]string{
 	"Vary":                        "Accept-Encoding",
 	"X-Frame-Options":             "SAMEORIGIN",
 }
+
 func isStandardComment(key, value string) bool {
 	if v, ok := standardComments[key]; ok {
 		return v == value
@@ -53,24 +54,32 @@ func isStandardComment(key, value string) bool {
 	return false
 }
 
+const kArchiveTimeLayout = "2006-01-02T15:04:05.999Z07:00"
+
 // Create the body of a comment which can be added to the archive of a fetch.
 func makeArchiveComment(vlr *VehicleLocationsResponse, cleanForXml bool) []byte {
 	skipStandardComments := true
 	var b bytes.Buffer
 	b.Grow(2048)
 	b.WriteString(fmt.Sprintf("URL=%s\n", vlr.Url))
-	timeLayout := "2006-01-02T15:04:05.999Z07:00"
 	llt := util.TimeToUnixMillis(vlr.LastLastTime)
 	if llt > 0 {
+		// TODO Fix bad files where llt was correct, but the formatted time was
+		// ResultTime, not LastLastTime.  ARGH!!!
 		b.WriteString(fmt.Sprintf("LastLastTime=%d (%s)\n",
-			llt, vlr.RequestTime.Format(timeLayout)))
+			llt, vlr.LastLastTime.Format(kArchiveTimeLayout)))
 	} else {
 		b.WriteString(fmt.Sprintf("LastLastTime=%d\n", llt))
 	}
+	if vlr.Report != nil && !vlr.LastTime.IsZero() {
+		lt := util.TimeToUnixMillis(vlr.LastTime)
+		b.WriteString(fmt.Sprintf("LastTime=%d (%s)\n",
+			lt, vlr.LastTime.Format(kArchiveTimeLayout)))
+	}
 	b.WriteString(fmt.Sprintf("RequestTime=%s\n",
-		vlr.RequestTime.Format(timeLayout)))
+		vlr.RequestTime.Format(kArchiveTimeLayout)))
 	b.WriteString(fmt.Sprintf("ResultTime=%s\n",
-		vlr.ResultTime.Format(timeLayout)))
+		vlr.ResultTime.Format(kArchiveTimeLayout)))
 	if vlr.Response != nil && vlr.Response.StatusCode != http.StatusOK {
 		b.WriteString(fmt.Sprintf("Status=%s\n", vlr.Response.Status))
 		b.WriteString(fmt.Sprintf("StatusCode=%d\n", vlr.Response.StatusCode))
@@ -104,7 +113,7 @@ func makeArchiveComment(vlr *VehicleLocationsResponse, cleanForXml bool) []byte 
 }
 
 func (p *VLRArchiver) AddResponse(vlr *VehicleLocationsResponse) (err error) {
-  var ext, filename string
+	var ext, filename string
 	surroundComment := true
 	lengthBeforeComments := 0
 	resumeBodyAt := 0

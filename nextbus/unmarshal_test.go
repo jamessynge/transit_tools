@@ -1,8 +1,8 @@
 package nextbus
 
 import (
-    "testing"
-    "github.com/jamessynge/transit_tools/compare"
+	"github.com/jamessynge/transit_tools/compare"
+	"testing"
 )
 
 func TestUnmarshalNextbusXml_Empty(t *testing.T) {
@@ -51,28 +51,28 @@ func TestUnmarshalNextbusXml_RouteConfig(t *testing.T) {
 	expected := &BodyElement{
 		Routes: []*RouteElement{
 			&RouteElement{
-				Tag: "76",
-				Title: "76",
-				Color: "9933cc",
+				Tag:      "76",
+				Title:    "76",
+				Color:    "9933cc",
 				OppColor: "ffffff",
-				LatMin: 42.3954299,
-				LatMax: 42.4628099,
-				LonMin: -71.29118,
-				LonMax: -71.14248,
+				LatMin:   42.3954299,
+				LatMax:   42.4628099,
+				LonMin:   -71.29118,
+				LonMax:   -71.14248,
 				Stops: []*StopElement{
 					&StopElement{
-						Tag: "141",
-						Title: "Alewife Station Busway",
-						Lat: 42.3954299,
-						Lon: -71.14248,
+						Tag:    "141",
+						Title:  "Alewife Station Busway",
+						Lat:    42.3954299,
+						Lon:    -71.14248,
 						StopId: "00141",
 					},
 				},
 				Directions: []*DirectionElement{
 					&DirectionElement{
-						Tag: "76_0_var0",
-						Title: "Hanscom Civil Airport via Lexington Center",
-						Name: "Outbound",
+						Tag:      "76_0_var0",
+						Title:    "Hanscom Civil Airport via Lexington Center",
+						Name:     "Outbound",
 						UseForUI: true,
 						Stops: []StopElement{
 							StopElement{Tag: "141"},

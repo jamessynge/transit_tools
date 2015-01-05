@@ -1,8 +1,8 @@
 package geom
 
 import (
-	"github.com/jamessynge/transit_tools/compare"
 	"fmt"
+	"github.com/jamessynge/transit_tools/compare"
 	"strings"
 	"testing"
 )

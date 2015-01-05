@@ -58,7 +58,7 @@ func DoHttpRequest(client *http.Client, request *http.Request) *HttpFetchRespons
 		reqSize, _ := EstimateRequestSize(request)
 		respSize, _ := hfr.EstimateSize()
 		glog.Infof("DoHttpRequest: reqSize=%d respSize=%d totalSize=%d\nURL: %s",
-							 reqSize, respSize, reqSize + respSize, request.URL)
+			reqSize, respSize, reqSize+respSize, request.URL)
 	}
 
 	if response != nil && response.StatusCode != http.StatusOK {

@@ -418,6 +418,10 @@ func arrayComparator(
 	len1, len2 := val1.Len(), val2.Len()
 	if len1 != len2 {
 		reportLengthDifference(fieldPath, typ, len1, len2, state)
+		// TODO Add support for detecting insertion/deletion and moves, rather
+		// than doing comparisons of elements only when they have the same index.
+		// May necessitate being smart about when to do this (i.e. not when it
+		// is ridiculously expensive).
 	}
 	// Compare entries that both slices have.
 	elemType := typ.Elem()
@@ -537,7 +541,7 @@ func (p *Difference) String() string {
 Declared: %s
 Expected: %s
   Actual: %s`,
-  			p.FieldName, p.Msg, p.FieldType, p.Value1, p.Value2)
+			p.FieldName, p.Msg, p.FieldType, p.Value1, p.Value2)
 	}
 	v1, v2 := p.Value1, p.Value2
 	if v1 == nil && v2 == nil {
@@ -547,6 +551,7 @@ Expected: %s
 		if v == nil {
 			return "nil"
 		}
+		// TODO Use %q instead of %s where appropriate.
 		if x, ok := v.(fmt.Stringer); ok {
 			return x.String()
 		}
@@ -558,7 +563,7 @@ Expected: %s
     Type: %s
 Expected: %s
   Actual: %s`,
-			p.FieldName, p.Msg, p.FieldType, fn(v1), fn(v2))
+		p.FieldName, p.Msg, p.FieldType, fn(v1), fn(v2))
 }
 
 func (d Differences) String() string {
@@ -605,25 +610,6 @@ type Difference struct {
 
 
 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 type logNothing int
 

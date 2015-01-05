@@ -55,7 +55,7 @@ func (p *rrcHelper) waitBefore(bBytes int, regulator RateRegulator) {
 		if p.doLog2 {
 			glog.Flush()
 			glog.Infof("%s offered=%d  prediction=%.1f  waitFor=%s  opDuration=%s",
-								 p.name, bBytes, prediction, waitFor, p.opDuration)
+				p.name, bBytes, prediction, waitFor, p.opDuration)
 			glog.Flush()
 		}
 		waitFor -= p.opDuration
@@ -63,7 +63,7 @@ func (p *rrcHelper) waitBefore(bBytes int, regulator RateRegulator) {
 	} else if p.doLog2 {
 		glog.Flush()
 		glog.Infof("%s offered=%d  prediction=%.1f  frac=%f",
-							 p.name, bBytes, prediction, frac)
+			p.name, bBytes, prediction, frac)
 		glog.Flush()
 	}
 	p.started = true
@@ -93,8 +93,8 @@ func (p *rrcHelper) waitAfter(offered, actual int, regulator RateRegulator) {
 		glog.Flush()
 		bps := float64(actual) / periodDuration.Seconds()
 		glog.Infof("%s offered=%d   actual=%d   period=%s   opDur=%s  rate=%d bytes/sec",
-							 p.name, offered, actual, periodDuration, currentOpDuration,
-							 int64(bps))
+			p.name, offered, actual, periodDuration, currentOpDuration,
+			int64(bps))
 		glog.Flush()
 	}
 
@@ -107,7 +107,7 @@ func (p *rrcHelper) waitAfter(offered, actual int, regulator RateRegulator) {
 		if p.usedFraction == 0 {
 			p.usedFraction = currentFraction
 		} else {
-			p.usedFraction = p.usedFraction * 0.9 + currentFraction * 0.1
+			p.usedFraction = p.usedFraction*0.9 + currentFraction*0.1
 		}
 		// Given how many bytes we consumed from the available pool, and how long
 		// we took to do so (including the time spent waiting in waitBefore), find
@@ -116,13 +116,13 @@ func (p *rrcHelper) waitAfter(offered, actual int, regulator RateRegulator) {
 		if p.doLog2 {
 			glog.Flush()
 			glog.Infof("%s waitFor=%s   fractions: prev=%.2f  current=%.2f  next=%.2f",
-			           p.name, waitFor, oldFraction, currentFraction, p.usedFraction)
+				p.name, waitFor, oldFraction, currentFraction, p.usedFraction)
 			glog.Flush()
 		}
 		time.Sleep(waitFor)
 	} else if actual > offered {
 		glog.Errorf("%s actual is greater than offered!  %d > %d",
-							  p.name, actual, offered)
+			p.name, actual, offered)
 	}
 
 	// Adjust opDuration (weighted average, 10% current duration,
@@ -132,15 +132,15 @@ func (p *rrcHelper) waitAfter(offered, actual int, regulator RateRegulator) {
 		if p.opDuration == 0 {
 			p.opDuration = currentOpDuration
 		} else {
-			p.opDuration = (p.opDuration * 9 + currentOpDuration) / 10
+			p.opDuration = (p.opDuration*9 + currentOpDuration) / 10
 		}
 	}
 
 	if p.doLog2 {
 		glog.Flush()
 		glog.Infof("%s call durations: prev=%s  curr=%s  next=%s  total=%s",
-							 p.name, oldOpDuration, currentOpDuration,
-							 p.opDuration, periodDuration)
+			p.name, oldOpDuration, currentOpDuration,
+			p.opDuration, periodDuration)
 		glog.Flush()
 	}
 
@@ -152,11 +152,11 @@ type RateRegulatedConn struct {
 	net.Conn
 	regulator RateRegulator
 
-	id int32
-	openTime time.Time
-	bytesRead int64
+	id           int32
+	openTime     time.Time
+	bytesRead    int64
 	bytesWritten int64
-	nextReport time.Time
+	nextReport   time.Time
 
 	readHelper  rrcHelper
 	writeHelper rrcHelper
@@ -180,18 +180,18 @@ func NewRateRegulatedConn(conn net.Conn, regulator RateRegulator) net.Conn {
 	result := &RateRegulatedConn{
 		Conn:      conn,
 		regulator: regulator,
-		id: id,
+		id:        id,
 		readHelper: rrcHelper{
-			name: fmt.Sprint("R", id),
+			name:           fmt.Sprint("R", id),
 			_MIN_DURATION_: minDuration,
-			doLog1: doLog1,
-			doLog2: doLog2,
+			doLog1:         doLog1,
+			doLog2:         doLog2,
 		},
 		writeHelper: rrcHelper{
-			name: fmt.Sprint("W", id),
+			name:           fmt.Sprint("W", id),
 			_MIN_DURATION_: minDuration,
-			doLog1: doLog1,
-			doLog2: doLog2,
+			doLog1:         doLog1,
+			doLog2:         doLog2,
 		},
 	}
 	now := time.Now()
@@ -203,9 +203,13 @@ func NewRateRegulatedConn(conn net.Conn, regulator RateRegulator) net.Conn {
 }
 
 func (p *RateRegulatedConn) Report() {
-	if !p.readHelper.doLog1 { return }
+	if !p.readHelper.doLog1 {
+		return
+	}
 	now := time.Now()
-	if !now.After(p.nextReport) { return }
+	if !now.After(p.nextReport) {
+		return
+	}
 	glog.Flush()
 	glog.Warning(p)
 	glog.Flush()
@@ -242,9 +246,9 @@ func (p *RateRegulatedConn) String() string {
 	totalBytes := p.bytesRead + p.bytesWritten
 	bytesPerSec := float64(totalBytes) / openDuration.Seconds()
 	fmt.Fprintf(&buf,
-			"Connection %d   open=%s   r=%d   w=%d   total=%d   rate=%d bytes/sec",
-			p.id, openDuration, p.bytesRead, p.bytesWritten,
-      totalBytes, int64(bytesPerSec))
+		"Connection %d   open=%s   r=%d   w=%d   total=%d   rate=%d bytes/sec",
+		p.id, openDuration, p.bytesRead, p.bytesWritten,
+		totalBytes, int64(bytesPerSec))
 	return buf.String()
 }
 

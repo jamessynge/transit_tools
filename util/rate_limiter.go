@@ -3,7 +3,7 @@ package util
 import (
 	"fmt"
 	"github.com/golang/glog"
-//	"runtime"
+	//	"runtime"
 	"time"
 )
 
@@ -66,7 +66,7 @@ type rateRegulatorImpl struct {
 func (p *rateRegulatorImpl) String() string {
 	pct := p.lastAvailable / p.capacity * 100
 	return fmt.Sprintf("avail %d (%.1f%% of %d)",
-			int64(p.lastAvailable), pct, int64(p.capacity))
+		int64(p.lastAvailable), pct, int64(p.capacity))
 }
 
 func (p *rateRegulatorImpl) MayUse(prediction uint) time.Duration {
@@ -142,10 +142,10 @@ func (p *rateRegulatorImpl) core(
 		glog.Flush()
 		if periodSecs == 0 {
 			glog.Infof("rr core entry: %s    may use: %d   deltaSeconds: %.6f",
-								 p, int64(used), deltaSeconds)
+				p, int64(used), deltaSeconds)
 		} else {
 			glog.Infof("rr core entry: %s    used: %d   periodSecs: %.6f   deltaSeconds: %.6f",
-								 p, int64(used), periodSecs, deltaSeconds)
+				p, int64(used), periodSecs, deltaSeconds)
 		}
 		glog.Flush()
 		defer func() {
@@ -267,7 +267,7 @@ func NewRateRegulator(initialAvailability, maximumCapacity uint32,
 		lastAvailable:      float64(initialAvailability),
 		lastTime:           time.Now(),
 		addTokensPerSecond: float64(maximumCapacity) / interval.Seconds(),
-		vlog2: glog.V(2),
+		vlog2:              glog.V(2),
 	}
 	go rri.run()
 	return rri, nil

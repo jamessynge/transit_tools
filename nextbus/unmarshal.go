@@ -3,8 +3,8 @@ package nextbus
 import (
 	"encoding/xml"
 	"fmt"
-	"github.com/jamessynge/transit_tools/geo"
 	"github.com/golang/glog"
+	"github.com/jamessynge/transit_tools/geo"
 	//	"log"
 )
 
@@ -60,7 +60,7 @@ type StopElement struct {
 	Lat         float64 `xml:"lat,attr"`
 	Lon         float64 `xml:"lon,attr"`
 	StopId      string  `xml:"stopId,attr"`
-	EpochTime   int64  `xml:"epochTime,attr"`
+	EpochTime   int64   `xml:"epochTime,attr"`
 	ElementText string  `xml:",chardata"`
 }
 type DirectionElement struct {
@@ -131,6 +131,15 @@ type VehicleLocationsBodyElement struct {
 	Error    *ErrorElement
 	Vehicles []*VehicleElement `xml:"vehicle"`
 	LastTime *LastTimeElement  `xml:"lastTime"`
+
+	// These two attributes are from my Python program, rather than my later
+	// Go program which added an XML comment with more such data.
+	//   <?xml version="1.0" ?>
+	//   <body copyright="All data copyright MBTA 2014."
+	//         request_time_ms="1400198504901"
+	//         request_url="http://webservices.nextbus.com/service/publicXMLFeed?command=vehicleLocations&amp;a=mbta&amp;t=1400212791460">
+	RequestTimeMs string `xml:"request_time_ms,attr"`
+	RequestUrl    string `xml:"request_url,attr"`
 }
 
 func UnmarshalVehicleLocationsBytes(
@@ -180,6 +189,3 @@ func maybeSetLongitudeField(val float64, field *geo.Longitude) (mismatch bool) {
 	}
 	return
 }
-
-
-

@@ -125,7 +125,7 @@ func (p *hiLoHttpFetcherState) runHiLoHttpFetcher() {
 				// until we've added an additional wait of waitFor.
 				delayAfterLoResp += waitFor
 				glog.Infoln("waitFor:", waitFor,
-										"   delayAfterLoResp now: ", delayAfterLoResp)
+					"   delayAfterLoResp now: ", delayAfterLoResp)
 			}
 
 		case loReq, ok := <-loCh:

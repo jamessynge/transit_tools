@@ -1,10 +1,13 @@
 package util
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/golang/glog"
 )
@@ -86,16 +89,16 @@ func IsNewer(path_a, path_b string) bool {
 }
 
 func IsEmptyDirectoryOrError(s string) (bool, error) {
-//	fi, err := os.Stat(s)
-//	if err != nil {
-//		return false, err
-//	}
-//	if !fi.IsDir() {
-//		return false, nil
-//	}
+	//	fi, err := os.Stat(s)
+	//	if err != nil {
+	//		return false, err
+	//	}
+	//	if !fi.IsDir() {
+	//		return false, nil
+	//	}
 	f, err := os.Open(s)
 	if err != nil {
-	  return false, err
+		return false, err
 	}
 	defer f.Close()
 	names, err := f.Readdirnames(10)
@@ -111,4 +114,134 @@ func IsEmptyDirectory(s string, defaultIfUnsure bool) bool {
 		return defaultIfUnsure
 	}
 	return result
+}
+
+func ExpandPathGlobs(paths, sep string) (expansion []string, err error) {
+	if sep == "" {
+		sep = string(os.PathListSeparator)
+	}
+	errs := NewErrors()
+	for _, glob := range strings.Split(paths, sep) {
+		glog.V(1).Infof("Expanding %q", glob)
+		glob = strings.TrimSpace(glob)
+		if glob == "" {
+			continue
+		}
+		matches, err := filepath.Glob(glob)
+		if err != nil {
+			glog.Errorln("Error expanding glob", glob, "\nError:", err)
+			errs.AddError(err)
+			continue
+		}
+		glog.V(1).Infof("Produced %d paths", len(matches))
+		expansion = append(expansion, matches...)
+	}
+	err = errs.ToError()
+	return
+}
+
+const (
+	osPathSeparatorString = string(os.PathSeparator)
+	pathSeparators        = "/" + string(os.PathSeparator)
+)
+
+func SplitPath(s string) (result []string) {
+	if len(s) == 0 {
+		return
+	}
+	if os.PathSeparator == '/' {
+		// Can only contain / as a separator (i.e. no other rune allowed).
+		return strings.Split(s, "/")
+	}
+	hasOPS := strings.ContainsRune(s, os.PathSeparator)
+	hasSlash := strings.Contains(s, "/")
+	if !hasOPS {
+		return strings.Split(s, "/")
+	}
+	if !hasSlash {
+		return strings.Split(s, osPathSeparatorString)
+	}
+	// Has both / and the OS path separator, which I assume are all
+	// intended as separators (on Windows '/' and '\' are both acceptable
+	// between a dir and an entry in that dir, including another dir).
+	b := []byte(s)
+	for {
+		n := bytes.IndexAny(b, pathSeparators)
+		if n < 0 {
+			// No more separators.
+			result = append(result, string(b))
+			return
+		}
+		result = append(result, string(b[0:n]))
+		b = b[n:]
+		_, l := utf8.DecodeRune(b)
+		b = b[l:]
+	}
+}
+
+func PathPartsLess(parts1, parts2 []string) bool {
+	for n := 0; n < len(parts1) && n < len(parts2); n++ {
+		if parts1[n] == parts2[n] {
+			continue
+		}
+		if n+1 == len(parts1) && n+1 < len(parts2) {
+			// Within a directory, what files to sort before directories.
+			return true
+		}
+		if n+1 < len(parts1) && n+1 == len(parts2) {
+			// Within a directory, what files to sort before directories.
+			return false
+		}
+		return parts1[n] < parts2[n]
+	}
+	if len(parts1) == len(parts2) {
+		return false
+	} // Paths are equal.
+	return len(parts1) < len(parts2)
+}
+
+func PathLess(path1, path2 string) bool {
+	if path1 == path2 {
+		return false
+	}
+	parts1, parts2 := SplitPath(path1), SplitPath(path2)
+	return PathPartsLess(parts1, parts2)
+}
+
+// Sort a slice of paths, considering each element of the path separately.
+// a/a sorts after a/, which sorts after a.
+func SortPaths(paths []string) {
+	parts := make(map[string][]string)
+	for _, p := range paths {
+		parts[p] = SplitPath(p)
+	}
+	less := func(i, j int) bool {
+		pi, pj := parts[paths[i]], parts[paths[j]]
+		return PathPartsLess(pi, pj)
+	}
+	less2 := func(i, j int) bool {
+		v := less(i, j)
+		if v {
+			glog.Infof("Path i (%d) is less than path j (%d):\ni: %s\nj: %s",
+				i, j, paths[i], paths[j])
+		}
+		return v
+	}
+	swap := func(i, j int) {
+		//		glog.Infof("Swapping paths at i (%d) and j (%d):\ni: %s\nj: %s",
+		//							 i, j, paths[i], paths[j])
+		paths[i], paths[j] = paths[j], paths[i]
+	}
+	if glog.V(2) {
+		Sort3(len(paths), less2, swap)
+	} else {
+		Sort3(len(paths), less, swap)
+	}
+
+	if glog.V(1) {
+		glog.Info("Sorted path entries:")
+		for _, p := range paths {
+			glog.Info("\t", p)
+		}
+	}
 }

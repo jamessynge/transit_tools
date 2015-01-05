@@ -17,7 +17,7 @@ type hiLoHttpFetcher2State struct {
 }
 
 func NewHiLoHttpFetcher2(
-		hiFetcher, loFetcher HttpRegulatedFetcher) HiLoHttpFetcher {
+	hiFetcher, loFetcher HttpRegulatedFetcher) HiLoHttpFetcher {
 	state := &hiLoHttpFetcher2State{
 		hiFetcher: hiFetcher,
 		loFetcher: loFetcher,
@@ -105,7 +105,7 @@ func (p *hiLoHttpFetcher2State) runHiLoHttpFetcher2() {
 				// until we've added an additional wait of waitFor.
 				delayAfterLoResp += hrfr.WaitFor
 				glog.V(1).Infoln("WaitFor:", hrfr.WaitFor,
-									       "   delayAfterLoResp now: ", delayAfterLoResp)
+					"   delayAfterLoResp now: ", delayAfterLoResp)
 			}
 
 		case loReq, ok := <-loCh:

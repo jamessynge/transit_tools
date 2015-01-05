@@ -4,11 +4,11 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/jamessynge/transit_tools/geo"
+	"github.com/jamessynge/transit_tools/util"
 	"io/ioutil"
 	"log"
 	"path/filepath"
 	"strings"
-	"github.com/jamessynge/transit_tools/util"
 )
 
 type Route struct {

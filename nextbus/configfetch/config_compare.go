@@ -1,51 +1,20 @@
 package configfetch
 
+// Support for comparing two config xml files (the result of
+// FetchAgencyConfig, etc.) for equality (ignoring the differences
+// caused by adding metadata to the xml files in the form of comments).
+
 import (
-"bytes"
-"errors"
-"io/ioutil"
-"path/filepath"
-"strings"
-"os"
-"sync/atomic"
+	"bytes"
+	"io/ioutil"
+	"path/filepath"
+	"strings"
 
-"github.com/golang/glog"
+	"github.com/golang/glog"
 
-"github.com/jamessynge/transit_tools/compare"
-"github.com/jamessynge/transit_tools/nextbus"
-"github.com/jamessynge/transit_tools/util"
+	"github.com/jamessynge/transit_tools/compare"
+	"github.com/jamessynge/transit_tools/nextbus"
 )
-
-var compareStoppedErr error = errors.New("Config comparison stopped")
-var CompareStoppedErr error = compareStoppedErr
-
-func getDirDescendants(dir string, doStop *int32) ([]string, error) {
-	errs := util.NewErrors()
-  descendants := []string{}
-	walkFn := func(path string, info os.FileInfo, err error) error {
-		if atomic.LoadInt32(doStop) != 0 {
-			return compareStoppedErr
-		}
-		if err == nil {
-			rel, err := filepath.Rel(dir, path)
-			if err == nil {
-				if !info.IsDir() {
-					descendants = append(descendants, rel)
-				}
-			} else {
-				errs.AddError(err)
-			}
-		} else {
-			errs.AddError(err)
-		}
-		return nil
-  }
-  err := filepath.Walk(dir, walkFn)
-  if err != nil {
-  	return nil, err
-  }
-  return descendants, errs.ToError()
-}
 
 const (
 	kCommentStart = "<!--"
@@ -53,6 +22,7 @@ const (
 )
 
 var commentStart, commentEnd []byte
+
 func init() {
 	commentStart = []byte(kCommentStart)
 	commentEnd = []byte(kCommentEnd)
@@ -72,7 +42,7 @@ func findXmlComment(data []byte) (startIndex, endIndex int) {
 	return -1, -1
 }
 
-func removeXmlComments(data[] byte) []byte {
+func removeXmlComments(data []byte) []byte {
 	searchStart := 0
 	for {
 		startIndex, endIndex := findXmlComment(data[searchStart:])
@@ -83,7 +53,7 @@ func removeXmlComments(data[] byte) []byte {
 		endIndex += searchStart
 		// Remove whitespace before and after too.
 		for startIndex > 0 {
-			c := data[startIndex - 1]
+			c := data[startIndex-1]
 			if c == ' ' || c == '\n' {
 				startIndex--
 			} else {
@@ -93,7 +63,7 @@ func removeXmlComments(data[] byte) []byte {
 		for endIndex < len(data) {
 			c := data[endIndex]
 			if c == ' ' || c == '\n' {
-				endIndex ++
+				endIndex++
 			} else {
 				break
 			}
@@ -102,7 +72,7 @@ func removeXmlComments(data[] byte) []byte {
 		glog.V(2).Infof("Removing comment: %q", data[startIndex:endIndex])
 		copy(data[startIndex:], data[endIndex:])
 		commentLength := endIndex - startIndex
-		data = data[0:len(data) - commentLength]
+		data = data[0 : len(data)-commentLength]
 	}
 }
 
@@ -130,9 +100,10 @@ func compareTwoConfigFiles(dir1, dir2, rel string) (eq bool, err error) {
 		glog.Infoln("Non-xml files are different", rel)
 		return false, nil
 	}
-	bytes1 = removeXmlComments(bytes1)
-	bytes2 = removeXmlComments(bytes2)
-	if bytes.Equal(bytes1, bytes2) {
+	// Compare the non-comment bytes of the two xml files.
+	nc1 := removeXmlComments(bytes1)
+	nc2 := removeXmlComments(bytes2)
+	if bytes.Equal(nc1, nc2) {
 		glog.V(2).Infoln("Cleaned bytes are the same for", rel)
 		return true, nil
 	}
@@ -148,62 +119,13 @@ func compareTwoConfigFiles(dir1, dir2, rel string) (eq bool, err error) {
 	}
 	eq, diffs := compare.DeepCompare(body1, body2)
 	if !eq {
-		glog.Infof("Files are different:\nFile 1: %s\nFile 2: %s\nDiffs:\n%s",
-							 fp1, fp2, diffs)
+		glog.Infof("Files are different:\nFile 1: %s\nFile 2: %s", fp1, fp2)
+		if !glog.V(1) && len(diffs) > 5 {
+			diffs = diffs[0:5]
+		}
+		glog.Infof("Differences:\n%s", diffs)
 	} else {
 		glog.V(2).Infoln("Nextbus xml matches for", rel)
 	}
 	return eq, nil
-}
-
-// Relatively trivial comparison, just returns true if the xml documents are
-// all the same, false if they aren't, including if there are different
-// numbers of files. Any error is deemed to indicate a difference, so we
-// only delete config dirs when there is no difference.
-func StoppableConfigDirsComparison(dir1, dir2 string, doStop *int32) (eq bool, err error) {
-	entries1, err := getDirDescendants(dir1, doStop)
-	if err != nil {
-		return false, err
-	}
-	glog.V(1).Infoln("Found", len(entries1), "entries in", dir1)
-	entries2, err := getDirDescendants(dir2, doStop)
-	if err != nil {
-		return false, err
-	}
-	glog.V(1).Infoln("Found", len(entries2), "entries in", dir2)
-	if len(entries1) != len(entries2) {
-		// Clearly different somewhere.
-		return false, nil
-	}
-	for ndx, _ := range entries1 {
-		if atomic.LoadInt32(doStop) != 0 {
-			return false, compareStoppedErr
-		}
-		entry1, entry2 := entries1[ndx], entries2[ndx]
-		if entry1 < entry2 {
-			// There is an extra entry in entries1.
-			return false, nil
-		}
-		if entry1 > entry2 {
-			// There is an extra entry in entries2
-			return false, nil
-		}
-		// Are the files the same?
-		// I'm assuming that the files are small enough that I don't need to
-		// push doStop all the way into compareTwoConfigFiles().
-		if eq, err := compareTwoConfigFiles(dir1, dir2, entry1); !eq || err != nil {
-			return false, err
-		}
-	}
-	return true, nil
-}
-
-// Relatively trivial comparison, just returns true if the xml documents are
-// all the same, false if they aren't, including if there are different
-// numbers of files. Any error is deemed to indicate a difference, so we
-// only delete config dirs when there is no difference.
-func CompareConfigDirs(dir1, dir2 string) (eq bool, err error) {
-	doStop := new(int32)
-	*doStop = 0
-	return StoppableConfigDirsComparison(dir1, dir2, doStop)
 }

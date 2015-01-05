@@ -1,4 +1,5 @@
 package util
+
 /*
 On MS Windows, to track how well system time is tracking an NTP server, try
 one of the following:
@@ -8,24 +9,28 @@ w32tm /stripchart /period:900 /computer:time.nist.gov
 import (
 	"flag"
 	"fmt"
-//	"strings"
 	"time"
 )
 
 type TimeLocation struct {
 	Location *time.Location
 }
+
 func (p *TimeLocation) At(t time.Time) time.Time {
 	return t.In(p.Location)
 }
 func (p *TimeLocation) Set(s string) error {
 	v, err := time.LoadLocation(s)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	p.Location = v
 	return nil
 }
 func (p *TimeLocation) String() string {
-	if p.Location == nil { return "<nil-location>" }
+	if p.Location == nil {
+		return "<nil-location>"
+	}
 	return p.Location.String()
 }
 func (p *TimeLocation) Get() interface{} {
@@ -35,7 +40,7 @@ func NewTimeLocationFlag(name, defaultLocation, usage string) *TimeLocation {
 	return NewTimeLocationFlagSet(flag.CommandLine, name, defaultLocation, usage)
 }
 func NewTimeLocationFlagSet(
-		fs *flag.FlagSet, name, defaultLocation, usage string) *TimeLocation {
+	fs *flag.FlagSet, name, defaultLocation, usage string) *TimeLocation {
 	p := new(TimeLocation)
 	if defaultLocation != "" {
 		val, err := time.LoadLocation(defaultLocation)
@@ -45,7 +50,7 @@ func NewTimeLocationFlagSet(
 			// so we'll just panic if the default is bad/unusable (e.g. if the
 			// time.Location database is missing).
 			panic(fmt.Sprintf("Unable to convert %s to a time.Location value!\n%s",
-												defaultLocation, err))
+				defaultLocation, err))
 		}
 		p.Location = val
 	}
@@ -56,9 +61,12 @@ func NewTimeLocationFlagSet(
 type TimeLocationPtr struct {
 	pp **time.Location
 }
+
 func (p *TimeLocationPtr) Set(s string) error {
 	v, err := time.LoadLocation(s)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	*(p.pp) = v
 	return nil
 }
@@ -76,7 +84,7 @@ func NewTimeLocationVar(ppLocation **time.Location, name, usage string) {
 	NewTimeLocationVarFlagSet(flag.CommandLine, ppLocation, name, usage)
 }
 func NewTimeLocationVarFlagSet(
-		fs *flag.FlagSet, ppLocation **time.Location, name, usage string) {
+	fs *flag.FlagSet, ppLocation **time.Location, name, usage string) {
 	if ppLocation == nil {
 		panic("pointer to *time.Location variable is nil!")
 	}
@@ -92,6 +100,10 @@ func TimeToUnixMillis(t time.Time) int64 {
 	return t.Unix()*1000 + int64(t.Nanosecond()/1000000)
 }
 
+func TimeToUnixSeconds(t time.Time) float64 {
+	return float64(t.Unix()) + (float64(t.Nanosecond()) / 1000000000)
+}
+
 func MidnightOfSameDay(t time.Time) time.Time {
 	y, m, d := t.Date()
 	midnight := time.Date(y, m, d, 0, 0, 0, 0, t.Location())
@@ -100,7 +112,7 @@ func MidnightOfSameDay(t time.Time) time.Time {
 
 func MidnightOfNextDay(t time.Time) time.Time {
 	y, m, d := t.Date()
-	midnight := time.Date(y, m, d + 1, 0, 0, 0, 0, t.Location())
+	midnight := time.Date(y, m, d+1, 0, 0, 0, 0, t.Location())
 	return midnight
 }
 
@@ -155,7 +167,7 @@ func PrettyFutureTime(now, future time.Time) (result string) {
 		midnight = MidnightOfNextDay(midnight)
 		if future.Before(midnight) {
 			return fmt.Sprintf("%s at %s", future.Weekday().String(),
-												 FormatTimeOnly(future))
+				FormatTimeOnly(future))
 		} else if future.Equal(midnight) {
 			return fmt.Sprintf("%s at midnight", future.Weekday().String())
 		}
@@ -165,5 +177,5 @@ func PrettyFutureTime(now, future time.Time) (result string) {
 	// for the days of the following week (e.g. "next Tuesday at noon").
 
 	return fmt.Sprintf("%s at %s", future.Format("2006-01-02"),
-										 FormatTimeOnly(future))
+		FormatTimeOnly(future))
 }

@@ -1,6 +1,9 @@
 package geom
 
-import ()
+import (
+	"fmt"
+)
+	
 
 type Rect struct {
 	MinX, MaxX, MinY, MaxY float64
@@ -70,6 +73,33 @@ func (r Rect) Center() Point {
 	return Point{x, y}
 }
 
+// Produces the smallest axis-aligned rectangle rectangle that includes both
+// r and o.
+func (r Rect) Union(o Rect) Rect {
+	if o.MinX > r.MinX {
+		o.MinX = r.MinX
+	}
+	if o.MinY > r.MinY {
+		o.MinY = r.MinY
+	}
+	if o.MaxX < r.MaxX {
+		o.MaxX = r.MaxX
+	}
+	if o.MaxY < r.MaxY {
+		o.MaxY = r.MaxY
+	}
+	return o
+}
+
+// Produces a new rectangle that is larger by the amount specified.
+func (r Rect) AddBorder(xborder, yborder float64) Rect {
+	r.MinX -= xborder
+	r.MaxX += xborder
+	r.MinY -= yborder
+	r.MaxY += yborder
+	return r
+}
+
 // Cohen-Sutherland clipping algorithm support
 const (
 	Inside = 0         // 0000
@@ -92,3 +122,10 @@ func (r Rect) OutCode(p Point) (outCode int) {
 	}
 	return
 }
+
+func (r Rect) String() string {
+	return fmt.Sprintf("{X=(%v to %v), Y=(%v to %v)}", r.MinX, r.MaxX, r.MinY, r.MaxY)
+}
+
+
+

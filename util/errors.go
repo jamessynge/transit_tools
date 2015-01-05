@@ -30,6 +30,10 @@ type Errors interface {
 	Error() string
 }
 
+// TODO Maybe add (context... string) arg, so that caller can provide context
+// for errors via nested errors with context. Then when AddError is called,
+// if it is an Errors instance, we can examine it to see if any errors during
+// the context.
 func NewErrors() Errors {
 	return &errorsImpl{}
 }
@@ -90,7 +94,6 @@ func (p *errorsImpl) ToString() string {
 		return ""
 	}
 	// TODO Include context in which errors occurred.
-
 
 	if p.NumErrors() == 1 {
 		return p.errors[0].Error()

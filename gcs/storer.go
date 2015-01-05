@@ -13,16 +13,14 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"golang.org/x/net/context"
 	"github.com/golang/oauth2"
 	"github.com/golang/oauth2/google"
+	"golang.org/x/net/context"
 	"google.golang.org/cloud"
 	"google.golang.org/cloud/compute/metadata"
 	"google.golang.org/cloud/pubsub"
 	"google.golang.org/cloud/storage"
-
 )
-
 
 // newClient creates http.Client with a jwt service account when
 // jsonFile flag is specified, otherwise by obtaining the GCE service
@@ -52,22 +50,21 @@ func newClient(jsonFile string) (*http.Client, error) {
 }
 
 func CopyLocalFileToBucket(
-		ctx context.Context,
-		localPath, bucket, remotePath string,
-		object *storage.Object) (storage.Object, error) {
+	ctx context.Context,
+	localPath, bucket, remotePath string,
+	object *storage.Object) (storage.Object, error) {
 	// TODO Open localPath first before creating a remote file.
 
 	f, err := os.Open(localPath)
 
-
-/*
-	// If not provided, create a default Object.
-	if object == nil {
-		//	&storage.Object{ContentType: "text/plain", ACL: []storage.ACLRule{storage.ACLRule{"allUsers", storage.RoleReader}}}, // Shared Publicly
-		object = &storage.Object{}
-		// TODO Use http.DetectContentType to set the ContentType field.
-	}
-*/
+	/*
+		// If not provided, create a default Object.
+		if object == nil {
+			//	&storage.Object{ContentType: "text/plain", ACL: []storage.ACLRule{storage.ACLRule{"allUsers", storage.RoleReader}}}, // Shared Publicly
+			object = &storage.Object{}
+			// TODO Use http.DetectContentType to set the ContentType field.
+		}
+	*/
 
 	wc := storage.NewWriter(ctx, bucket, remotePath, object)
 	written, err := io.Copy(wc, rc)

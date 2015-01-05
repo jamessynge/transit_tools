@@ -5,6 +5,8 @@ import (
 	"log"
 	"math"
 	"strconv"
+
+	"github.com/jamessynge/transit_tools/util"
 )
 
 type Latitude float64
@@ -19,6 +21,9 @@ type Heading int
 type Location struct {
 	Lat Latitude
 	Lon Longitude
+}
+func (u Location) String() string {
+	return fmt.Sprintf("(%f, %f)", u.Lat, u.Lon)
 }
 
 func (u Location) SameLocation(v Location) bool {
@@ -64,6 +69,31 @@ func LocationFromFloat64s(lat64, lon64 float64) (loc Location, err error) {
 		loc.Lon, err = LongitudeFromFloat64(lon64)
 	}
 	return loc, err
+}
+
+// Format as degrees, minutes and seconds, with a suffix for sign.
+func formatDMS(v float64, neg, pos string) string {
+	var suffix string
+	if v < 0 {
+		suffix = neg
+		v = -v
+	} else {
+		suffix = pos
+	}
+	deg := int(v)
+	v -= float64(deg)
+	v *= 60
+	min := int(v)
+	v -= float64(min)
+	v *= 60
+	return fmt.Sprintf("%d.%02d.%04.1f%s", deg, min, v, suffix)
+}
+
+func (v Latitude) FormatDMS() string {
+	return formatDMS(float64(v), "S", "N")
+}
+func (v Longitude) FormatDMS() string {
+	return formatDMS(float64(v), "W", "E")
 }
 
 //var headingPopulation int
@@ -199,4 +229,65 @@ func FromDistanceAndHeading(
 			destination, origin, distance, heading)
 	}
 	return
+}
+
+func MeasureCentralAxes(
+		loLon, hiLon Longitude, loLat, hiLat Latitude) (
+		snDistance, weDistance float64) {
+	var south, north, west, east Location
+	south.Lat = loLat
+	north.Lat = hiLat
+	west.Lon = loLon
+	east.Lon = hiLon
+
+	south.Lon = (loLon + hiLon) / 2
+	north.Lon = south.Lon
+	west.Lat = (loLat + hiLat) / 2
+	east.Lat = west.Lat
+
+//	glog.Infof("south: %s", south)
+//	glog.Infof("north: %s", north)
+//	glog.Infof("west: %s", west)
+//	glog.Infof("east: %s", east)
+
+	// Measure the distance.
+	snDistance, _ = ToDistanceAndHeading(south, north)
+	weDistance, _ = ToDistanceAndHeading(west, east)
+
+//	glog.Infof("snDistance: %v", snDistance)
+//	glog.Infof("weDistance: %v", weDistance)
+
+	return
+}
+
+func (a Location) SouthToNorthLess(b Location) bool {
+	return a.Lat < b.Lat
+}
+func SouthToNorthLess(a, b Location) bool {
+	return a.SouthToNorthLess(b)
+}
+func SortSouthToNorth(s []Location) {
+	less := func(i, j int) bool {
+		return SouthToNorthLess(s[i], s[j])
+	}
+	swap := func(i, j int) {
+		s[i], s[j] = s[j], s[i]
+	}
+	util.Sort3(len(s), less, swap)
+}
+
+func (a Location) WestToEastLess(b Location) bool {
+	return a.Lon < b.Lon
+}
+func WestToEastLess(a, b Location) bool {
+	return a.Lon < b.Lon
+}
+func SortWestToEast(s []Location) {
+	less := func(i, j int) bool {
+		return WestToEastLess(s[i], s[j])
+	}
+	swap := func(i, j int) {
+		s[i], s[j] = s[j], s[i]
+	}
+	util.Sort3(len(s), less, swap)
 }

@@ -13,11 +13,11 @@ package nblocations
 
 import (
 	"github.com/golang/glog"
-	"math"
 	"github.com/jamessynge/transit_tools/nextbus"
+	"github.com/jamessynge/transit_tools/util"
+	"math"
 	"sort"
 	"time"
-	"github.com/jamessynge/transit_tools/util"
 )
 
 type VehicleAggregator interface {
