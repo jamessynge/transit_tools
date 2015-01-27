@@ -178,7 +178,3 @@ func Test_FindRootXmlElementOffset() {
 
 	Use_FindRootXmlElementOffset(s)
 }
-
-func main() {
-	Test_FindRootXmlElementOffset()
-}
