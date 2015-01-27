@@ -10,7 +10,7 @@ import (
 type HeadingTransform interface {
 	// Heading (clockwise degrees, 0 north) to direction
 	// (counter-clockwise radians, 0 horizontal).
-	GeoHeadingToDirection(heading geo.Heading) (direction float64, err error)
+	GeoHeadingToDirection(heading geo.HeadingInt) (direction float64, err error)
 	ToDirection(heading float64) (direction float64)
 	FromDirection(direction float64) (heading float64)
 }
@@ -24,12 +24,12 @@ type CoordTransform interface {
 
 type NoOpHeadingTransform struct{}
 
-func (t NoOpHeadingTransform) GeoHeadingToDirection(heading geo.Heading) (
+func (t NoOpHeadingTransform) GeoHeadingToDirection(heading geo.HeadingInt) (
 	direction float64, err error) {
 	if heading.IsValid() {
 		direction = t.ToDirection(float64(heading))
 	} else {
-		err = fmt.Errorf("Invalid geo.Heading: %v", heading)
+		err = fmt.Errorf("Invalid geo.HeadingInt: %v", heading)
 	}
 	return
 }

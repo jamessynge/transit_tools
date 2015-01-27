@@ -42,7 +42,7 @@ func TestHeadingTransform(t *testing.T) {
 
 	for i := range tests {
 		test := tests[i]
-		dir, err := xf.GeoHeadingToDirection(geo.Heading(test.heading))
+		dir, err := xf.GeoHeadingToDirection(geo.HeadingInt(test.heading))
 		if test.ok {
 			if err != nil || dir != test.direction {
 				t.Errorf(
