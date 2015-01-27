@@ -17,7 +17,7 @@ type VehicleLocation struct {
 	geo.Location
 	Route     *Route
 	Direction *Direction
-	Heading   geo.Heading
+	Heading   geo.HeadingInt
 	// Consider adding SpeedKmHr in support of those agencies which report it.
 }
 

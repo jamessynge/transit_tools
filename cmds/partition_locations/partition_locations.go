@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -33,15 +34,18 @@ var (
 		"output", "",
 		"Directory into which to write the geo-partitioned locations.")
 
-	noPartitionFlag = flag.Bool(
-		"no-partition", false,
-		"Create index (if it doesn't exist), read the index, but don't partition "+
-			"bulk data.")
-
+	createIndexFlag = flag.Bool(
+		"create-index", false,
+		"Create index, overwriting existing index if present.")
 	minLocationsFlag = flag.Int(
 		"min-locations", 1000000,
 		"Minimum number of locations to load in order to generate partitions.")
+	squarePartitionsFlag = flag.Bool(
+		"square-partition", true,
+		"Create index (if it doesn't exist), read the index, but don't partition "+
+			"bulk data.")
 
+	// Non-square partitions flags:
 	partitionLevelsFlag = flag.Uint(
 		"partition-levels", 6,
 		"Number of levels of partitioning (alternating between east-west and "+
@@ -52,8 +56,25 @@ var (
 		"cuts-per-level", 2,
 		"At each level, how many cuts should be made; at least 1.")
 
+	// Square partitions flags:
+	minSquareSideFlag = flag.Uint(
+		"min-square-side", 768,
+		"Minimum number of meters on a square partition side.")
+	maxSquareSideFlag = flag.Uint(
+		"max-square-side", 8192,
+		"Maximum number of meters on a square partition side.")
+	maxSamplesFractionFlag = flag.Float64(
+		"max-samples-fraction", 0.005,
+		"Maximum fraction of the samples used for creating the index that may " +
+		"be in one partition's area, unless the partition would be too small.")
+
+	noPartitionFlag = flag.Bool(
+		"no-partition", false,
+		"Create index (if it doesn't exist), read the index, but don't partition "+
+			"bulk data.")
+
 	setLogDirFlag = flag.Bool(
-		"set_log_dir", true,
+		"set-log_dir", true,
 		"Set glog's --log_dir default value immediately after parsing flags so that "+
 			"messages are logged there immediately, and not after the file is rotated.")
 )
@@ -76,6 +97,24 @@ func checkFlags() {
 	}
 	if *cutsPerLevelFlag < 1 {
 		glog.Fatalf("--cuts-per-level=%d is too low", *cutsPerLevelFlag)
+	}
+
+	if *minSquareSideFlag < 1 {
+		glog.Fatalf("--min-square-side=%d is too low", *minSquareSideFlag)
+	}
+	if *maxSquareSideFlag <= *minSquareSideFlag {
+		glog.Fatalf("--max-square-side=%d is too low", *maxSquareSideFlag)
+	}
+
+	if 0.1 < *maxSamplesFractionFlag {
+		glog.Fatalf("--max-samples-fraction=%v is too high", *maxSamplesFractionFlag)
+	}
+	if *maxSamplesFractionFlag <= 0 {
+		glog.Fatalf("--max-samples-fraction=%v is too low", *maxSamplesFractionFlag)
+	}
+	maxSamples := int(*maxSamplesFractionFlag * float64(*minLocationsFlag))
+	if maxSamples <= 0 {
+		glog.Fatalf("--max-samples-fraction=%v is too low", *maxSamplesFractionFlag)
 	}
 
 	// Set --log_dir before any logging with glog (except the Fatal calls above)
@@ -170,14 +209,21 @@ func CreateAgencyPartitioner(filePaths []string) *nblocations.AgencyPartitioner 
 	SortFiles(filePaths, true)
 	locations := LoadSomeLocations(filePaths, *minLocationsFlag)
 
-	return nblocations.CreateAgencyPartitioner(
-		*agencyFlag, locations, *partitionLevelsFlag, *cutsPerLevelFlag)
+	if *squarePartitionsFlag {
+		return nblocations.CreateAgencyPartitioner3(
+			*agencyFlag, locations,
+			geo.Meters(*minSquareSideFlag), geo.Meters(*maxSquareSideFlag),
+			*maxSamplesFractionFlag)
+	} else {
+		return nblocations.CreateAgencyPartitioner(
+			*agencyFlag, locations, *partitionLevelsFlag, *cutsPerLevelFlag)
+	}
 }
 
 func ReadOrCreatePartitioner() *nblocations.AgencyPartitioner {
 	// To ensure we always operate the same way, we create and save the
 	// partitions index, then read it back from the file.
-	if !util.IsFile(nblocations.GetPartitionsIndexPath(*outputDirFlag)) {
+	if *createIndexFlag || !util.IsFile(nblocations.GetPartitionsIndexPath(*outputDirFlag)) {
 		filePaths := FindAllFiles(*locationsGlobFlag)
 		a := CreateAgencyPartitioner(filePaths)
 		nblocations.SavePartitionsIndex(*outputDirFlag, a)
@@ -187,66 +233,96 @@ func ReadOrCreatePartitioner() *nblocations.AgencyPartitioner {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-type CRC struct {
+func ReadAnOpenedCsvInputFile(
+		partitioner nblocations.Partitioner,
+		filePath string, crc *util.CsvReaderCloser) int64 {
+	var wg sync.WaitGroup
+	csvRecordsCh := make(chan []string, 100)
+
+	// Function that will be used for N go routines, so that we can make use of
+	// multiple processors.
+	recordGR := func() {
+		defer wg.Done()
+		for {
+			record, ok := <-csvRecordsCh
+			if !ok { return }
+			if ral, e := nblocations.CreateRecordAndLocation(record); e != nil {
+				glog.Warningf("Error parsing record: %v\nRecord: %v", e, record)
+				continue
+			} else if e = partitioner.Partition(ral); e != nil {
+				glog.Warningf("Error partitioning RecordAndLocation: %v\nRecord: %v\nRAL: %v", e, record, ral)
+				continue
+			}
+		}
+	}
+	cpus := runtime.NumCPU()
+	for n := 0; n < cpus; n++ {
+		wg.Add(1)
+		go recordGR()
+	}
+	glog.Infof("Reading from %s", filePath)
+	records := int64(0)
+	errorCount := 0
+	for {
+		if record, e := crc.Read(); e == nil {
+			records++
+			csvRecordsCh <- record
+			errorCount = 0
+		} else if e == io.EOF {
+			glog.Infof("Done reading %d records from from %s", records, filePath)
+			break
+		} else {
+			glog.Warningf("Error reading from %s: %s", filePath, e)
+			errorCount++
+			if errorCount > 10 {
+				glog.Warningf("Giving up on reading from %s after %d records", filePath, records)
+				break
+			}
+		}
+	}
+
+	close(csvRecordsCh)
+	go crc.Close()
+	wg.Wait()
+	
+	return records
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+type OpenedCsvInputFile struct {
 	filePath string
 	crc      *util.CsvReaderCloser
 }
 
 func OpenCsvFilesSendToCh(
-	filePaths []string, ch chan<- CRC,
-	wg *sync.WaitGroup) {
+	filePaths []string, ch chan<- OpenedCsvInputFile, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for _, filePath := range filePaths {
-		crc, err := util.OpenReadCsvFile(filePath)
+		crc, err := util.OpenReadCsvFileAndPump(filePath)
 		if err != nil {
 			glog.Warningf("Unable to open %s:\nError: %s", filePath, err)
 			continue
 		}
-		ch <- CRC{filePath: filePath, crc: crc}
+		crc.Comment = '#'
+		ch <- OpenedCsvInputFile{filePath: filePath, crc: crc}
 	}
 	close(ch)
-	wg.Done()
 }
 
-func ReadCRCs(partitioner nblocations.Partitioner,
-	ch <-chan CRC, wg *sync.WaitGroup) {
-	totalRecords := 0
+func ReadOpenedCsvInputFiles(partitioner nblocations.Partitioner,
+	ch <-chan OpenedCsvInputFile, wg *sync.WaitGroup) {
+	defer wg.Done()
+	totalRecords := int64(0)
 	for {
-		crc, ok := <-ch
+		cif, ok := <-ch
 		if !ok {
 			break
 		}
-		glog.Infof("Reading from %s", crc.filePath)
-		records := 0
-		for {
-			var e error
-			if record, e1 := crc.crc.Read(); e1 == nil {
-				records++
-				if ral, e2 := nblocations.CreateRecordAndLocation(record); e2 == nil {
-					e3 := partitioner.Partition(ral)
-					if e3 == nil {
-						continue
-					}
-					e = e3
-				} else {
-					e = e2
-				}
-			} else {
-				e = e1
-			}
-			if e == io.EOF {
-				crc.crc.Close()
-				glog.Infof("Done reading %d records from from %s", records, crc.filePath)
-				break
-			}
-			if e != nil {
-				glog.Warningf("Error reading from %s: %s", crc.filePath, e)
-				break
-			}
-		}
+		records := ReadAnOpenedCsvInputFile(partitioner, cif.filePath, cif.crc)
 		totalRecords += records
 	}
 	glog.Infof("Done reading %d records from CSV files", totalRecords)
-	wg.Done()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -266,12 +342,13 @@ func main() {
 	filePaths := FindAllFiles(*locationsGlobFlag)
 	SortFiles(filePaths, false)
 
-	ch := make(chan CRC) // Unbuffered, so we'll only open one file ahead of
-	// the
+	// Unbuffered, so we'll only open one file ahead of
+	// the one that we're processing.
+	ch := make(chan OpenedCsvInputFile)
 	var wg sync.WaitGroup
 
 	wg.Add(1)
-	go ReadCRCs(partitioner, ch, &wg)
+	go ReadOpenedCsvInputFiles(partitioner, ch, &wg)
 
 	glog.Infof("Start to read %d files", len(filePaths))
 	wg.Add(1)
