@@ -14,18 +14,19 @@ type CsvReader interface {
 
 type CsvReaderCloser struct {
 	src io.Closer
-	cr  *csv.Reader
+	*csv.Reader
+//	cr  *csv.Reader
 }
 
-func (r *CsvReaderCloser) Read() (record []string, err error) {
-	return r.cr.Read()
-}
-func (r *CsvReaderCloser) ReadAll() (records [][]string, err error) {
-	return r.cr.ReadAll()
-}
+//func (r *CsvReaderCloser) Read() (record []string, err error) {
+//	return r.cr.Read()
+//}
+//func (r *CsvReaderCloser) ReadAll() (records [][]string, err error) {
+//	return r.cr.ReadAll()
+//}
 func (r *CsvReaderCloser) Close() (err error) {
 	tmp := r.src
-	r.cr = nil
+	r.Reader = nil
 	r.src = nil
 	if tmp != nil {
 		err = tmp.Close()
@@ -33,12 +34,24 @@ func (r *CsvReaderCloser) Close() (err error) {
 	return
 }
 func NewCsvReaderCloser(rc io.ReadCloser) *CsvReaderCloser {
-	return &CsvReaderCloser{rc, csv.NewReader(rc)}
+	return &CsvReaderCloser{
+		src: rc,
+		Reader: csv.NewReader(rc),
+	}
 }
 
 func OpenReadCsvFile(filePath string) (crc *CsvReaderCloser, err error) {
 	// Open the file for reading.
 	rc, err := OpenReadFile(filePath)
+	if err != nil {
+		return
+	}
+	return NewCsvReaderCloser(rc), nil
+}
+
+func OpenReadCsvFileAndPump(filePath string) (crc *CsvReaderCloser, err error) {
+	// Open the file for reading.
+	rc, err := OpenReadFileAndPump(filePath)
 	if err != nil {
 		return
 	}
@@ -92,6 +105,7 @@ func ReadCsvFileToFn(filePath string, fn RecordProcessorFn) (
 			}
 		}
 	}()
+	crc.Comment = '#'
 	return ReadCsvToFn(crc, filePath, fn)
 }
 
