@@ -43,9 +43,11 @@ func ComputeT(agency string, lastTime time.Time, extraSeconds uint) int64 {
 			if since.Minutes() > 5 {
 				// Limit fetches to the last 5 minutes, so we don't suddenly get old
 				// location reports for vehicles we previously flushed from the
-				// aggregator.
+				// aggregator. Happens there are no vehicle location reports for a long
+				// time (middle of the night or days the service isn't running,
+				// including unscheduled shutdowns such as a blizzard).
 				t2 = time.Now().Add(time.Duration(-5) * time.Minute)
-				glog.Warningf("lastTime-extraSeconds is too old; lastTime adjusted\n  From: %s\n    To: %s", lastTime, t2)
+				v2.Infof("lastTime-extraSeconds is too old; lastTime adjusted\n  From: %s\n    To: %s", lastTime, t2)
 			} else {
 				v2.Infof("Adjusted lastTime by %s\n  From: %s\n    To: %s", extraDuration, lastTime, t2)
 			}
@@ -58,7 +60,6 @@ func ComputeT(agency string, lastTime time.Time, extraSeconds uint) int64 {
 		glog.Warningf("t: %d", t)
 		glog.Warningf("lastTime.Unix(): %d", lastTime.Unix())
 		glog.Warningf("lastTime.Nanosecond(): %d", lastTime.Nanosecond())
-		//		glog.Warningf("Why is time before unix epoch?\nlastTime: %s\nt: %d", lastTime, t)
 		t = 0
 	}
 	return t

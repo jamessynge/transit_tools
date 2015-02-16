@@ -59,6 +59,9 @@ func (u *VehicleLocation) UnixMilliseconds() int64 {
 	return s*1000 + int64(n)/1000000
 }
 
+// TODO Support two formats, one with unix_ms and [date time], and another
+// with unix_secs but not [date time].
+
 func VehicleCSVFieldNames() (fields []string) {
 	fields = append(fields, "unix_ms")
 	fields = append(fields, "date time")

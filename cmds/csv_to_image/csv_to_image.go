@@ -4,9 +4,6 @@ import (
 	"flag"
 	//	"fmt"
 	"encoding/csv"
-	"github.com/jamessynge/transit_tools/geo"
-	"github.com/jamessynge/transit_tools/nextbus"
-	"github.com/jamessynge/transit_tools/util"
 	"image"
 	"image/color"
 	"image/png"
@@ -16,6 +13,10 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+
+	"github.com/jamessynge/transit_tools/geo"
+	"github.com/jamessynge/transit_tools/nextbus"
+	"github.com/jamessynge/transit_tools/util"
 )
 
 type LocationCensus struct {
