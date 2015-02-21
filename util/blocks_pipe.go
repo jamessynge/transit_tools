@@ -1,9 +1,5 @@
 package util
 
-// Reads all of an io.Reader into a sequence of blocks, send those blocks
-// to a channel, read the blocks with another go-routine, exposing as another
-// reader.
-
 import (
 	"io"
 	"sync"
@@ -11,6 +7,9 @@ import (
 	"github.com/golang/glog"
 )
 
+// Reads all of an io.Reader into a sequence of blocks, send those blocks
+// to a consumer, which returns the empty (consumed) blocks back, limiting
+// the memory and read-ahead to that specified when the BlocksPipe was created.
 type BlocksPipe struct {
 	// Producer goroutine fills buffers and inserts them into the data channel. If
 	// it encounters an error, it sets the err field, and closes the data channel.
@@ -29,6 +28,10 @@ type BlocksPipe struct {
 	stop chan interface{}
 }
 
+// Creates a BlocksPipe reading into blockCount buffers of size blockSize from
+// in. Starts a go-routine to read ahead into those blocks. If in is an
+// io.ReaderCloser, then in is closed when the consumer closes the
+// BlocksPipeReader that wraps the pipe.
 func ReadIntoBlocksPipe(in io.Reader, blockSize, blockCount int) *BlocksPipe {
 	result := &BlocksPipe{
 		data: make(chan []byte, blockCount),
@@ -108,6 +111,7 @@ func ReadIntoBlocksPipe(in io.Reader, blockSize, blockCount int) *BlocksPipe {
 	return result
 }
 
+// An io.ReaderCloser implementation, reading from a BlocksPipe.
 type BlocksPipeReader struct {
 	pipe* BlocksPipe
 	mutex sync.Mutex
@@ -115,6 +119,10 @@ type BlocksPipeReader struct {
 	offset int
 }
 
+// Reads up to min(len(b), N) bytes from the BlocksPipe, where N is the
+// blockSize specified when the BlocksPipe was created (i.e. this implementation
+// reads from only a single block in the BlocksPipe, in order to simplify the
+// implementation).
 func (p *BlocksPipeReader) Read(b []byte) (int, error) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -154,6 +162,7 @@ func (p *BlocksPipeReader) Read(b []byte) (int, error) {
 	}
 	return n, nil
 }
+// Closes the underlying BlocksPipe, which in turn closes the input.
 func (p *BlocksPipeReader) Close() error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
@@ -169,6 +178,8 @@ func BlocksPipeToReadCloser(pipe *BlocksPipe) io.ReadCloser {
 	return &BlocksPipeReader{pipe: pipe}
 }
 
+// Entry point for BlocksPipe and BlocksPipeReader: creates a BlocksPipe and
+// exposes it as an io.ReadCloser (implemented by BlocksPipeReader).
 func NewReadCloserPump(in io.Reader, blockSize, blockCount int) io.ReadCloser {
 	pipe := ReadIntoBlocksPipe(in, blockSize, blockCount)
 	return BlocksPipeToReadCloser(pipe)

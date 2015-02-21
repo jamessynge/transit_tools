@@ -1,3 +1,10 @@
+// Utility functions and types in support of transit_tools, but not specific
+// to that application. Much of util is focused on rate limited http fetching,
+// and I/O of .tar and .csv files (compressed or not), including via goroutines
+// to enable concurrent reading, decompressing, parsing and processing (and
+// vice versa). With luck I'll come up with a partitioning into smaller
+// packages.
+
 package util
 
 import (

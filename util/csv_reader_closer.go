@@ -7,23 +7,25 @@ import (
 	"github.com/golang/glog"
 )
 
+// Interface exposing csv.Reader operations Read (next record) and ReadAll (all
+// remaining records from the underlying source).
+// TODO(jamessynge): Move to a csv specific package (e.g. csvio), and rename
+// to Reader.
 type CsvReader interface {
 	Read() (record []string, err error)
 	ReadAll() (records [][]string, err error)
 }
 
+// A CsvReader implementation, adding a Close method. Embeds a csv.Reader,
+// so the exported fields (Comma, Comment, etc.) of csv.Reader are exported.
+// TODO(jamessynge):  Move to a csv specific package (e.g. csvio), and rename
+// to ReadCloser (not ReaderCloser).
 type CsvReaderCloser struct {
 	src io.Closer
 	*csv.Reader
-//	cr  *csv.Reader
 }
 
-//func (r *CsvReaderCloser) Read() (record []string, err error) {
-//	return r.cr.Read()
-//}
-//func (r *CsvReaderCloser) ReadAll() (records [][]string, err error) {
-//	return r.cr.ReadAll()
-//}
+// Close closes the underlying io.ReadCloser.
 func (r *CsvReaderCloser) Close() (err error) {
 	tmp := r.src
 	r.Reader = nil
@@ -33,6 +35,8 @@ func (r *CsvReaderCloser) Close() (err error) {
 	}
 	return
 }
+
+// NewCsvReaderCloser returns a new CsvReaderCloser that reads from rc.
 func NewCsvReaderCloser(rc io.ReadCloser) *CsvReaderCloser {
 	return &CsvReaderCloser{
 		src: rc,
@@ -40,6 +44,8 @@ func NewCsvReaderCloser(rc io.ReadCloser) *CsvReaderCloser {
 	}
 }
 
+// OpenReadCsvFile opens for reading a file (possibly compressed) of CSV records
+// and returns a CsvReaderCloser.
 func OpenReadCsvFile(filePath string) (crc *CsvReaderCloser, err error) {
 	// Open the file for reading.
 	rc, err := OpenReadFile(filePath)

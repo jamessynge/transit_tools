@@ -22,6 +22,12 @@ func init() {
 	tagEnd = []byte{'>'}
 }
 
+// Given the body of an XML document, returns the byte offset of the root
+// element of the document, and the offset of the start of the whitespace
+// that immediately precedes the root element; there maybe no whitespace,
+// in which case the two offsets are the same.  Skips over processing
+// elements and comments at the start.  Returns an error if the root is not
+// found.
 func FindRootXmlElementOffset(body []byte) (
 	whitespaceStart, rootOffset int, err error) {
 	defer func() {
@@ -110,22 +116,34 @@ func FindRootXmlElementOffset(body []byte) (
 	return
 }
 
+// Returns the locations of comments in an XML document, represented in an
+// array of length 2N, where each of the N pairs of integers record the
+// start and end (beyond) byte offset in body of the comments located.
+// An error is returned if the document is not well-formed "enough" (the
+// function does not require completely well-formed documents); CDATA sections
+// are not supported, nor are character references (e.g. &amp; or &#23;).
 func FindCommentsInXml(body []byte) (startAndEnds []int, err error) {
 	const kProcInstSearch = `"'?`
 	const kTagSearch = `"'>`
 
 	offset := 0
 	for {
+		// State: not currently in a tag (start or end).
 		// Find start of next tag.
 		pos := bytes.IndexByte(body[offset:], '<')
 		if pos == -1 {
 			return
 		}
+		// State: found a <, marking the start of a tag, processing element or
+		// document.
 		start := offset + pos
 		if bytes.HasPrefix(body[start:], commentStart) {
+			// State: found the start of a comment.
+			// Add the start offset to the output array.
 			startAndEnds = append(startAndEnds, start)
 			offset = start + len(kCommentStart)
 			rest := body[offset:]
+			// Find the end of the comment.
 			pos = bytes.Index(rest, commentEnd)
 			if pos == -1 {
 				err = fmt.Errorf("Comment starting at %d is not terminated", start)
@@ -135,6 +153,7 @@ func FindCommentsInXml(body []byte) (startAndEnds []int, err error) {
 			startAndEnds = append(startAndEnds, offset)
 			continue
 		}
+		// State: found a <, but not a comment.
 		var ending []byte
 		var search string
 		if bytes.HasPrefix(body[start:], procInstStart) {
@@ -146,9 +165,9 @@ func FindCommentsInXml(body []byte) (startAndEnds []int, err error) {
 			search = kTagSearch
 			offset = start + 1
 		}
+		// Search for the closing of the tag or processing element, which may
+		// be preceded by zero or more quoted strings.
 		for {
-			// Search for strings (quoted attribute values) of which there
-			// may be many, or the end of the tag.
 			pos = bytes.IndexAny(body[offset:], search)
 			if pos == -1 {
 				err = fmt.Errorf("Tag starting at %d is not terminated", start)

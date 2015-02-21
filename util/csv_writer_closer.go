@@ -25,6 +25,12 @@ func NewCsvWriteCloser(fwc *os.File, compress bool) *CsvWriteCloser {
 	return r
 }
 
+// OpenCsvWriteCloser opens a file for writing CSV records. If compress is true,
+// the output is compressed using gzip. If delExisting is true and the file
+// exists when this function is called, OpenCsvWriteCloser attempts to delete
+// the file before opening the file; if this fails the function attempts
+// to truncate the existing file as it opens it.
+// perm specifies the os.FileMode to be used when creating the file.
 func OpenCsvWriteCloser(
 	filePath string, compress, delExisting bool, perm os.FileMode) (*CsvWriteCloser, error) {
 	glog.V(1).Infof("OpenCsvWriteCloser(%q, compress=%v, delExisting=%v, %b)",
@@ -58,10 +64,13 @@ func OpenCsvWriteCloser(
 	return NewCsvWriteCloser(fwc, compress), nil
 }
 
+// Writer writes a single CSV record to p along with any necessary quoting.
+// A record is a slice of strings with each string being one field.
 func (p *CsvWriteCloser) Write(record []string) error {
 	return p.cw.Write(record)
 }
 
+// Flush buffered content (but not os.File.Sync nor syscall.Fsync).
 func (p *CsvWriteCloser) Flush() error {
 	return p.flush(true)
 }
@@ -86,6 +95,7 @@ func (p *CsvWriteCloser) flush(fullFlush bool) error {
 	return p.cw.Error()
 }
 
+// Flush the buffers, and close the underlying file.
 func (p *CsvWriteCloser) Close() error {
 	p.cw.Flush()
 	if p.gzw != nil {

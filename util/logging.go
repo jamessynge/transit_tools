@@ -47,6 +47,24 @@ func getLoggingPrefix(pStr *string) string {
 	return enterPrefix[0 : 2*enterExitDepth]
 }
 
+// Logs a prefix and a formatted message when called, and returns another
+// method that glog's another prefix and the same method when the returned
+// method is called. This is in support of logging the entry into and exit
+// from a method, such as:
+//
+//    func Foo(arg type) {
+//      defer util.EnterExitInfof("Foo(%v)", arg)()
+//      // Some work...
+//    }
+//
+// Note the final pair of parenthesis on the defer, which triggers the calling
+// of the returned function when the function Foo exits.
+// glog.InfoDepth is used so that the logged location is the line containing
+// the caller's defer statement.
+// The prefix indicates the depth of nesting of functions that call
+// EnterExitInfof and EnterExitVInfof, and the prefix is different
+// for entry and exit, so that is isn't too difficult
+// to tell the difference in the logged output.
 func EnterExitInfof(format string, args ...interface{}) func() {
 	enterExitDepth++
 	updateLoggingPrefixes()
@@ -62,6 +80,8 @@ func EnterExitInfof(format string, args ...interface{}) func() {
 	}
 }
 
+// Like EnterExitInfof, but takes a glog.Level specifying the verbosity
+// level of the log message.
 func EnterExitVInfof(v glog.Level, format string, args ...interface{}) func() {
 	if !glog.V(v) {
 		return func() {}
@@ -79,12 +99,18 @@ func EnterExitVInfof(v glog.Level, format string, args ...interface{}) func() {
 	}
 }
 
+// Logs a prefix and formatted message, the prefix being determined by the
+// nesting depth of calls to EnterExitInfof and EnterExitVInfof.
+// glog.InfoDepth is used so that the logged location is the line containing
+// the caller's defer statement.
 func IndentedInfof(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	prefix := levelPrefix[0 : enterExitDepth * kLevelPrefixUnit]
 	glog.InfoDepth(1, prefix, " ", msg)
 }
 
+// Like IndentedInfof, but takes a glog.Level specifying the verbosity
+// level of the log message.
 func IndentedVInfof(v glog.Level, format string, args ...interface{}) {
 	if glog.V(v) {
 		prefix := levelPrefix[0 : enterExitDepth * kLevelPrefixUnit]
